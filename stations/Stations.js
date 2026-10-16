@@ -8,8 +8,7 @@ import { openWaze, openApp, openVideoCamera, dial, shareText } from '../lib/laun
 import { toTime, fmtDur, fmtClock, toMin, dateKey, addDays } from '../lib/time';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider, Sheet } from '../components/UI';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchPeople, reportCall, whoToCall, firstPhone } from '../lib/callsApi';
+import { fetchPeople, whoToCall, firstPhone, loadCallLog, logCall } from '../lib/callsApi';
 import Icon from '../components/Icon';
 
 const fail = e => Alert.alert('לא הצלחתי', String(e?.message || e));
@@ -380,7 +379,7 @@ function RemoteCalls({ url }) {
   const t = useT();
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
-  const [seen, setSeen] = useState({});
+  const [log, setLog] = useState({});
   const [cur, setCur] = useState(null);
   const [status, setStatus] = useState('');
   const [note, setNote] = useState('');
@@ -390,25 +389,24 @@ function RemoteCalls({ url }) {
   const load = force => fetchPeople(url, { force }).then(d => { setData(d); setErr(d?.error || null); }).catch(e => setErr(String(e.message || e)));
   useEffect(() => {
     load(false);
-    AsyncStorage.getItem('calls_seen_v1').then(r => r && setSeen(JSON.parse(r))).catch(() => {});
+    loadCallLog().then(setLog);
   }, [url]);
 
-  const markSeen = row => {
-    const next = { ...seen, [row]: dayKey }; setSeen(next);
-    AsyncStorage.setItem('calls_seen_v1', JSON.stringify(next)).catch(() => {});
+  const call = async p => {
+    setLog(await logCall({ row: p.row, name: p.name, date: dayKey }));
+    setCur(p); setStatus(''); setNote('');
+    dial(firstPhone(p.phone)).catch(fail);
   };
-  const call = p => { markSeen(p.row); setCur(p); setStatus(''); setNote(''); dial(firstPhone(p.phone)).catch(fail); };
   const send = async () => {
-    if (!status && !note.trim()) { setCur(null); return; }
     setBusy(true);
-    try { await reportCall(url, { row: cur.row, name: cur.name, status, note: note.trim() }); setCur(null); load(true); }
+    try { setLog(await logCall({ row: cur.row, name: cur.name, date: dayKey, status, note: note.trim() })); setCur(null); }
     catch (e) { fail(e); } finally { setBusy(false); }
   };
 
   if (!data && !err) return <T c="sub" style={{ marginTop: SP.xl }}>טוען את רשימת ההתרמה…</T>;
-  const list = whoToCall(data?.people || []);
-  const todayDone = list.filter(p => seen[p.row] === dayKey);
-  const queue = list.filter(p => seen[p.row] !== dayKey);
+  const list = whoToCall(data?.people || [], log);
+  const todayDone = list.filter(p => p.lastCall === dayKey);
+  const queue = list.filter(p => p.lastCall !== dayKey);
   const shown = queue.slice(0, more ? 40 : 10);
   const statuses = (data?.statuses?.length ? data.statuses : ['לנסות שוב', 'לחזור אליו', 'תורם', 'לא תורם', 'נשלח לינק', 'לשלוח לינק']);
 
@@ -426,7 +424,7 @@ function RemoteCalls({ url }) {
             <View style={{ flex: 1 }}>
               <T v="bodyB">{p.name}</T>
               <T v="small" c="sub" numberOfLines={2}>
-                {[p.status, (p.forecast || p.potential) && `צפי ${p.forecast || p.potential}`, hist.length && `שנים קודמות: ${hist.join(' · ')}`, p.note].filter(Boolean).join(' · ')}
+                {[p.myStatus || p.status, (p.forecast || p.potential) && `צפי ${p.forecast || p.potential}`, hist.length && `שנים קודמות: ${hist.join(' · ')}`, p.note, p.lastCall && `התקשרתי ${p.lastCall}`, p.myNotes?.slice(-1)[0]].filter(Boolean).join(' · ')}
               </T>
             </View>
             <IconBtn name="phone" tone="sunk" onPress={() => call(p)} />
@@ -440,7 +438,8 @@ function RemoteCalls({ url }) {
           {statuses.map(x => <Chip key={x} label={x} active={status === x} onPress={() => setStatus(status === x ? '' : x)} />)}
         </View>
         <Field value={note} onChangeText={setNote} placeholder="הערה (סכום, מתי לחזור…)" multiline style={{ marginTop: SP.md, minHeight: 70 }} />
-        <Btn title={busy ? 'שומר…' : 'לרשום בגיליון'} icon="check" kind="ok" disabled={busy} style={{ marginTop: SP.md }} onPress={send} />
+        <T v="small" c="sub" style={{ marginTop: SP.sm }}>נשמר רק בטלפון — הגיליון לא משתנה.</T>
+        <Btn title={busy ? 'שומר…' : 'שמור'} icon="check" kind="ok" disabled={busy} style={{ marginTop: SP.md }} onPress={send} />
       </Sheet>
     </View>
   );

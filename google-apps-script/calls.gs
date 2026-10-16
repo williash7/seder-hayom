@@ -1,8 +1,8 @@
 /**
  * סדר היום — חיבור לגיליון ההתרמה
  * ────────────────────────────────────────────────
- * מחזיר לאפליקציה את רשימת האנשים להתקשר אליהם מהלשונית "אנשי קשר חדש",
- * ורושם בחזרה סטטוס והערה אחרי כל שיחה.
+ * מחזיר לאפליקציה את רשימת האנשים להתקשר אליהם מהלשונית "אנשי קשר חדש".
+ * קריאה בלבד — הסקריפט לא כותב שום דבר לגיליון.
  *
  * התקנה (פעם אחת, מהמחשב):
  *  1. בגיליון: הרחבות ← Apps Script
@@ -22,8 +22,7 @@ function doGet(e) {
   const p = (e && e.parameter) || {};
   let out;
   try {
-    if (p.action === 'update') out = update_(p);
-    else if (p.action === 'ping') out = { ok: true, sheet: SHEET_NAME };
+    if (p.action === 'ping') out = { ok: true, sheet: SHEET_NAME };
     else out = list_();
   } catch (err) {
     out = { ok: false, error: String(err && err.message || err) };
@@ -83,36 +82,4 @@ function statuses_() {
   const s = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Sheet12');
   if (!s) return ['לנסות שוב', 'לחזור אליו', 'תורם', 'לא תורם', 'נשלח לינק', 'לשלוח לינק'];
   return s.getRange(1, 1, s.getLastRow(), 1).getDisplayValues().map(function (r) { return String(r[0]).trim(); }).filter(String);
-}
-
-/** רושם סטטוס והערה. בודק שהשם בשורה תואם, כדי לא לכתוב על אדם אחר אם הגיליון זז */
-function update_(p) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    const sh = sheet_();
-    const h = header_(sh);
-    const row = Number(p.row);
-    if (!row || row <= h.row) throw new Error('שורה לא תקינה');
-    const nameCell = sh.getRange(row, h.map['שם']);
-    if (String(nameCell.getDisplayValue()).trim() !== String(p.name || '').trim())
-      throw new Error('השם בשורה ' + row + ' לא תואם — רענן את הרשימה');
-
-    const stamp = Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'dd/MM');
-    let note = String(p.note || '').trim();
-
-    if (p.status && h.map['סטטוס']) {
-      const cell = sh.getRange(row, h.map['סטטוס']);
-      if (cell.getFormula()) note = (p.status + (note ? ' — ' + note : '')); // עמודה מחושבת — לא לדרוס
-      else cell.setValue(p.status);
-    }
-    if (note && h.map['הערות']) {
-      const c = sh.getRange(row, h.map['הערות']);
-      const old = String(c.getDisplayValue() || '').trim();
-      c.setValue((old ? old + ' | ' : '') + stamp + ': ' + note);
-    }
-    return { ok: true };
-  } finally {
-    lock.releaseLock();
-  }
 }
