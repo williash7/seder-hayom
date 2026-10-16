@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { View, Pressable, Linking, Alert } from 'react-native';
 import * as Application from 'expo-application';
+import * as Updates from 'expo-updates';
 import { useT, SP } from '../lib/theme';
 import { useDay } from '../lib/DayContext';
 import { T, Btn, Sheet } from './UI';
@@ -35,6 +36,19 @@ export default function UpdateButton() {
     return () => clearInterval(iv);
   }, []);
 
+  const [ota, setOta] = useState('');
+  const checkOta = async () => {
+    try {
+      setOta('בודק…');
+      const r = await Updates.checkForUpdateAsync();
+      if (!r.isAvailable) { setOta('אין עדכון מהיר חדש ✓'); return; }
+      setOta('מוריד עדכון…');
+      await Updates.fetchUpdateAsync();
+      setOta('מתעדכן…');
+      await Updates.reloadAsync();
+    } catch (e) { setOta('לא הצלחתי לבדוק: ' + String(e?.message || e)); }
+  };
+
   const go = url => Linking.openURL(url).catch(e => Alert.alert('לא נפתח', String(e?.message || e)));
 
   return (
@@ -57,6 +71,8 @@ export default function UpdateButton() {
             {hasNew ? `יש גרסה חדשה מוכנה (בנייה ${latest}). מותקנת אצלך בנייה ${installed}.`
               : `מותקנת בנייה ${installed || '—'}${latest ? ' — זו האחרונה' : ''}.`}
           </T>
+          <Btn title="בדוק עדכון מהיר" icon="undo" kind="line" onPress={checkOta} />
+          {!!ota && <T v="small" c="sub">{ota}</T>}
           {hasNew && <Btn title="להתקין את הגרסה החדשה" icon="fwd" kind="gold" onPress={() => go(RELEASES)} />}
           <Btn title="לבקש שינוי מ-Claude" icon="edit" kind={hasNew ? 'line' : 'primary'}
             onPress={() => go(settings.chatUrl || CHAT_URL)} />

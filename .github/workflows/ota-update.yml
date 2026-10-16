@@ -1,0 +1,33 @@
+name: עדכון מיידי (OTA)
+
+# כל דחיפה ל-main שולחת את קוד ה-JS לטלפון כעדכון מיידי.
+# הטלפון מושך אותו בפתיחה הבאה (או בכפתור "בדוק עדכון").
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+concurrency:
+  group: ota
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: בדיקת מנוע היום
+        run: node scripts/check-engine.js
+      - name: שליחת העדכון
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          MSG=$(git log -1 --pretty=%s)
+          npx --yes eas-cli@latest update --channel preview --environment preview --message "$MSG" --platform android --non-interactive

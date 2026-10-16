@@ -42,6 +42,7 @@
       "androidMode": "default"
     },
     "plugins": [
+      "expo-updates",
       [
         "expo-notifications",
         {
@@ -59,11 +60,23 @@
       ]
     ],
     "extra": {
-      "releaseName": "0.2",
+      "releaseName": "0.3",
       "eas": {
         "projectId": "5f28778a-e203-4c61-91e7-bfcdfd204462"
       }
     },
-    "owner": "asher7"
+    "owner": "asher7",
+    "updates": {
+      "enabled": true,
+      "url": "https://u.expo.dev/5f28778a-e203-4c61-91e7-bfcdfd204462",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD",
+      "requestHeaders": {
+        "expo-channel-name": "preview"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    }
   }
 }
