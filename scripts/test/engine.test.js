@@ -55,6 +55,12 @@ p = planDay({ settings: S, date: fri, state: { stations: { wake: { status: 'done
 ok(!find(p, 'shacharit').anchor && !(p.nextAnchor && p.nextAnchor.id === 'shacharit'), 'אחרי המניין האחרון — שחרית בלי עוגן ובלי איחור');
 ok(find(p, 'study_am').path.includes('{end}'), 'לימוד לפני התפילה נפתח עד שעת הסיום');
 
+// שישי — יש גם מניין 10:00
+const fopts = evaluateMinyan({ settings: S, date: fri, state: { stations: { wake: { status: 'done', start: 560, end: 560 } } }, zmanim: z, now: 560, prayer: 'shacharit' });
+ok(fopts.some(o => o.time === '10:00'), 'שישי — מניין 10:00 ברשימה');
+const sopts = evaluateMinyan({ settings: S, date: sun, state: {}, zmanim: z, now: 300, prayer: 'shacharit' });
+ok(!sopts.some(o => o.time === '10:00'), 'ראשון — אין מניין 10:00');
+
 // שבת — אין תחנות
 p = planDay({ settings: S, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: z, now: 540 });
 ok(p.empty, 'בשבת אין תכנית');

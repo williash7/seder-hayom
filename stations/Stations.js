@@ -256,6 +256,10 @@ function Minyan({ s }) {
         );
       })}
       {!opts.length && <T c="sub">לא הוגדרו מניינים — הגדרות ← מניינים</T>}
+      {opts.length > 0 && !opts.some(o => o.reachable) && (
+        <Btn title="כל המניינים עברו — להתפלל ביחידות" icon="check" kind="gold" style={{ marginTop: SP.md }}
+          onPress={() => actions.done(s.id, { picked: 'alone' })} />
+      )}
     </View>
   );
 }

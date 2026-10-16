@@ -141,6 +141,12 @@ function Minyanim({ settings, save }) {
           </Card>
         </Section>
       ))}
+      <Section title="שחרית — מניין נוסף רק ביום שישי">
+        <Card>
+          <ListEditor items={settings.minyanimByDay?.[5]?.shacharit || []} placeholder="HH:MM"
+            onChange={v => save({ minyanimByDay: { ...(settings.minyanimByDay || {}), 5: { ...(settings.minyanimByDay?.[5] || {}), shacharit: [...v].sort() } } })} />
+        </Card>
+      </Section>
     </>
   );
 }
