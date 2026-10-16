@@ -61,6 +61,16 @@ ok(fopts.some(o => o.time === '10:00'), 'שישי — מניין 10:00 ברשי�
 const sopts = evaluateMinyan({ settings: S, date: sun, state: {}, zmanim: z, now: 300, prayer: 'shacharit' });
 ok(!sopts.some(o => o.time === '10:00'), 'ראשון — אין מניין 10:00');
 
+// אחרי שחרית: אם נשאר זמן — לימוד; אם לא — מדלגים בשקט
+p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '08:30' } }, zmanim: z, now: m });
+ok(Math.round(find(p, 'study_post').duration) === 20, 'ראשון אחרי מניין 08:30 — 20 דק׳ לימוד עד היציאה לכולל');
+p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '09:00' } }, zmanim: z, now: m });
+ok(find(p, 'study_post').status === 'auto', 'ראשון אחרי מניין 09:00 — אין זמן, מדלגים בשקט');
+p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '07:30' } }, zmanim: z, now: toMin('07:20') });
+ok(find(p, 'study_post').duration >= 5, 'ראשון אחרי מניין מוקדם — יש לימוד אחרי שחרית');
+p = planDay({ settings: S, date: fri, state: {}, zmanim: z, now: toMin('05:00') });
+ok(find(p, 'study_post').duration <= 30 && find(p, 'mivtzaim').duration > 30, 'שישי — עד חצי שעה לימוד, והשאר למבצעים');
+
 // שבת — אין תחנות
 p = planDay({ settings: S, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: z, now: 540 });
 ok(p.empty, 'בשבת אין תכנית');

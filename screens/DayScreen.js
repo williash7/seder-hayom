@@ -39,7 +39,7 @@ export default function DayScreen({ go }) {
         <View style={{ marginTop: SP.xl }}>
           {plan.list.map((s, i) => {
             const cur = s.status === 'current';
-            const off = s.status === 'done' || s.status === 'skipped';
+            const off = s.status === 'done' || s.status === 'skipped' || s.status === 'auto';
             return (
               <Pressable key={s.id} onPress={() => setSel(s)}
                 style={{ flexDirection: 'row', gap: SP.md, minHeight: 58 }}>

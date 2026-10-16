@@ -270,8 +270,12 @@ function Study({ s }) {
   const app = settings.apps?.[s.appKey];
   return (
     <Actions>
-      {app && <Btn title={`פתח את ${app.name}${s.duration > 0 ? ` · ${fmtDur(s.duration)}` : ''}`} icon="book" kind="gold"
-        onPress={async () => { actions.start(s.id); try { await openAppAt(app, s.path, { wd: dayDate.getDay(), end: toTime(s.plannedEnd) }); } catch (e) { fail(e); } }} />}
+      {app && (s.options || [{ label: `פתח את ${app.name}`, path: s.path }])
+        .filter(o => !o.days || o.days.includes(dayDate.getDay()))
+        .map((o, i) => (
+          <Btn key={o.label} title={`${o.label}${s.duration > 0 && i === 0 ? ` · ${fmtDur(s.duration)}` : ''}`} icon="book" kind={i === 0 ? 'gold' : 'line'}
+            onPress={async () => { actions.start(s.id); try { await openAppAt(app, o.path, { wd: dayDate.getDay(), end: toTime(s.plannedEnd) }); } catch (e) { fail(e); } }} />
+        ))}
       <Btn title="סיימתי ללמוד" icon="check" kind="line" onPress={() => actions.done(s.id)} />
     </Actions>
   );
