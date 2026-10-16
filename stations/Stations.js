@@ -7,7 +7,9 @@ import { evaluateMinyan } from '../lib/engine';
 import { openWaze, openApp, openVideoCamera, dial, shareText } from '../lib/launch';
 import { toTime, fmtDur, fmtClock, toMin, dateKey, addDays } from '../lib/time';
 import { useT, SP, R } from '../lib/theme';
-import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider } from '../components/UI';
+import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider, Sheet } from '../components/UI';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fetchPeople, reportCall, whoToCall, firstPhone } from '../lib/callsApi';
 import Icon from '../components/Icon';
 
 const fail = e => Alert.alert('לא הצלחתי', String(e?.message || e));
@@ -368,6 +370,84 @@ function Tasks({ s }) {
 }
 
 export function CallList() {
+  const { settings } = useDay();
+  return settings.calls?.url ? <RemoteCalls url={settings.calls.url} /> : <LocalCalls />;
+}
+
+// רשימה מהגיליון
+function RemoteCalls({ url }) {
+  const { dayKey } = useDay();
+  const t = useT();
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
+  const [seen, setSeen] = useState({});
+  const [cur, setCur] = useState(null);
+  const [status, setStatus] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [more, setMore] = useState(false);
+
+  const load = force => fetchPeople(url, { force }).then(d => { setData(d); setErr(d?.error || null); }).catch(e => setErr(String(e.message || e)));
+  useEffect(() => {
+    load(false);
+    AsyncStorage.getItem('calls_seen_v1').then(r => r && setSeen(JSON.parse(r))).catch(() => {});
+  }, [url]);
+
+  const markSeen = row => {
+    const next = { ...seen, [row]: dayKey }; setSeen(next);
+    AsyncStorage.setItem('calls_seen_v1', JSON.stringify(next)).catch(() => {});
+  };
+  const call = p => { markSeen(p.row); setCur(p); setStatus(''); setNote(''); dial(firstPhone(p.phone)).catch(fail); };
+  const send = async () => {
+    if (!status && !note.trim()) { setCur(null); return; }
+    setBusy(true);
+    try { await reportCall(url, { row: cur.row, name: cur.name, status, note: note.trim() }); setCur(null); load(true); }
+    catch (e) { fail(e); } finally { setBusy(false); }
+  };
+
+  if (!data && !err) return <T c="sub" style={{ marginTop: SP.xl }}>טוען את רשימת ההתרמה…</T>;
+  const list = whoToCall(data?.people || []);
+  const todayDone = list.filter(p => seen[p.row] === dayKey);
+  const queue = list.filter(p => seen[p.row] !== dayKey);
+  const shown = queue.slice(0, more ? 40 : 10);
+  const statuses = (data?.statuses?.length ? data.statuses : ['לנסות שוב', 'לחזור אליו', 'תורם', 'לא תורם', 'נשלח לינק', 'לשלוח לינק']);
+
+  return (
+    <View style={{ marginTop: SP.xl }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <T v="tiny" c="sub">להתרים · {queue.length} בתור{todayDone.length ? ` · ${todayDone.length} היום` : ''}</T>
+        <Chip label="רענון" onPress={() => load(true)} />
+      </View>
+      {!!err && <T v="small" style={{ color: t.warn, marginTop: 6 }}>{data ? 'מציג רשימה שמורה — ' : ''}{err}</T>}
+      {shown.map(p => {
+        const hist = p.history.filter(Boolean);
+        return (
+          <View key={p.row} style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm, paddingVertical: 10 }}>
+            <View style={{ flex: 1 }}>
+              <T v="bodyB">{p.name}</T>
+              <T v="small" c="sub" numberOfLines={2}>
+                {[p.status, (p.forecast || p.potential) && `צפי ${p.forecast || p.potential}`, hist.length && `שנים קודמות: ${hist.join(' · ')}`, p.note].filter(Boolean).join(' · ')}
+              </T>
+            </View>
+            <IconBtn name="phone" tone="sunk" onPress={() => call(p)} />
+          </View>
+        );
+      })}
+      {queue.length > 10 && !more && <Btn title="להציג עוד" kind="ghost" small onPress={() => setMore(true)} />}
+
+      <Sheet visible={!!cur} onClose={() => setCur(null)} title={cur ? `איך היה עם ${cur.name}?` : ''}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm }}>
+          {statuses.map(x => <Chip key={x} label={x} active={status === x} onPress={() => setStatus(status === x ? '' : x)} />)}
+        </View>
+        <Field value={note} onChangeText={setNote} placeholder="הערה (סכום, מתי לחזור…)" multiline style={{ marginTop: SP.md, minHeight: 70 }} />
+        <Btn title={busy ? 'שומר…' : 'לרשום בגיליון'} icon="check" kind="ok" disabled={busy} style={{ marginTop: SP.md }} onPress={send} />
+      </Sheet>
+    </View>
+  );
+}
+
+// רשימה מקומית (עד שמחברים את הגיליון)
+function LocalCalls() {
   const { calls, actions, dayKey } = useDay();
   const t = useT();
   const [name, setName] = useState(''), [phone, setPhone] = useState('');
@@ -375,16 +455,16 @@ export function CallList() {
   return (
     <View style={{ marginTop: SP.xl }}>
       <T v="tiny" c="sub">אין משימות פתוחות — זמן להתרים</T>
+      <T v="small" c="sub" style={{ marginTop: 4 }}>אפשר לחבר את גיליון ההתרמה בהגדרות ← התרמה</T>
       {sorted.map(c => {
         const today = c.last === dayKey;
         return (
           <View key={c.id} style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm, paddingVertical: 8 }}>
             <View style={{ flex: 1 }}>
               <T v="bodyB" style={today ? { color: t.ok } : null}>{c.name}</T>
-              <T v="small" c="sub">{today ? 'דיברתם היום' : c.last ? `שיחה אחרונה ${c.last}` : 'עוד לא התקשרת'}{c.note ? ` · ${c.note}` : ''}</T>
+              <T v="small" c="sub">{today ? 'דיברתם היום' : c.last ? `שיחה אחרונה ${c.last}` : 'עוד לא התקשרת'}</T>
             </View>
             {!!c.phone && <IconBtn name="phone" tone="sunk" onPress={() => { actions.updateCall(c.id, { last: dayKey }); dial(c.phone).catch(fail); }} />}
-            <IconBtn name="check" onPress={() => actions.updateCall(c.id, { last: dayKey })} />
           </View>
         );
       })}

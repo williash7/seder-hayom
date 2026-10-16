@@ -8,11 +8,12 @@ import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Field, Section, Chip, ListEditor, Divider, IconBtn, Sheet } from '../components/UI';
 import { askPermission } from '../lib/notify';
+import { fetchPeople, whoToCall } from '../lib/callsApi';
 import { DAY_SHORT, uid } from '../lib/time';
 import { STATION_TYPES } from '../lib/defaults';
 
 const PANES = [
-  ['general', 'כללי'], ['places', 'מקומות'], ['minyanim', 'מניינים'], ['apps', 'אפליקציות'],
+  ['general', 'כללי'], ['places', 'מקומות'], ['minyanim', 'מניינים'], ['apps', 'אפליקציות'], ['calls', 'התרמה'],
   ['lists', 'רשימות ונוסחים'], ['stations', 'תחנות'],
 ];
 
@@ -37,6 +38,7 @@ export default function SettingsScreen() {
         {pane === 'places' && <Places settings={settings} save={save} />}
         {pane === 'minyanim' && <Minyanim settings={settings} save={save} />}
         {pane === 'apps' && <Apps settings={settings} save={save} />}
+        {pane === 'calls' && <Calls settings={settings} save={save} />}
         {pane === 'lists' && <Lists settings={settings} save={save} />}
         {pane === 'stations' && <Stations settings={settings} save={save} />}
       </ScrollView>
@@ -166,6 +168,31 @@ function Apps({ settings, save }) {
         </View>
       </Section>
     </>
+  );
+}
+
+function Calls({ settings, save }) {
+  const [msg, setMsg] = useState('');
+  const url = settings.calls?.url || '';
+  const test = async () => {
+    setMsg('בודק…');
+    try {
+      const d = await fetchPeople(url.trim(), { force: true });
+      setMsg(`מחובר ✓ — ${d.people.length} אנשי קשר, ${whoToCall(d.people).length} בתור להתרמה`);
+    } catch (e) { setMsg('לא התחבר: ' + (e.message || e)); }
+  };
+  return (
+    <Section title="גיליון ההתרמה">
+      <Card style={{ gap: SP.sm }}>
+        <T c="sub">כתובת הסקריפט מהגיליון (מסתיימת ב-/exec). הכתובת נשמרת רק בטלפון.</T>
+        <Field value={url} onChangeText={v => save({ calls: { ...settings.calls, url: v.trim() } })} placeholder="https://script.google.com/macros/s/…/exec" />
+        <Btn title="בדיקת חיבור" kind="line" small onPress={test} />
+        {!!msg && <T v="small">{msg}</T>}
+      </Card>
+      <T v="small" c="sub" style={{ marginTop: SP.md }}>
+        בלי גיליון מחובר, אפשר לנהל רשימת טלפונים קצרה בתוך האפליקציה (בתחנת המשימות).
+      </T>
+    </Section>
   );
 }
 
