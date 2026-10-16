@@ -1,0 +1,48 @@
+name: חיבור לעדכונים מיידיים (פעם אחת)
+
+# יוצר את הפרויקט ב-Expo ומכניס את המזהה שלו ל-app.json
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/eas-init.yml']
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: בדיקת EXPO_TOKEN
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then echo "✗ חסר הסוד EXPO_TOKEN"; exit 1; fi
+      - run: npm ci
+      - name: יצירת הפרויקט ב-Expo
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          npx --yes eas-cli@latest whoami
+          if grep -q '"projectId"' app.json; then echo "• כבר מחובר"; else npx --yes eas-cli@latest init --non-interactive --force; fi
+          grep -n '"projectId"\|"owner"' app.json
+      - name: שמירה
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add app.json
+          git diff --cached --quiet && echo "אין שינוי" || { git commit -m "חיבור לפרויקט Expo"; git push; }
+      - name: דיווח
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          { echo "### eas init: ${{ job.status }}"; echo '```'; grep -n '"projectId"\|"owner"' app.json || true; echo '```'; } > r.md
+          gh api repos/${{ github.repository }}/commits/${{ github.sha }}/comments -F body=@r.md >/dev/null || true
