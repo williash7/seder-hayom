@@ -1,0 +1,5 @@
+- אפליקציית Expo SDK 54, אנדרואיד בלבד. לקרוא את README.md לפני עבודה.
+- `version` ב-app.json נשאר 1.0.0; מה שמוצג למשתמש הוא `extra.releaseName`.
+- לא להוסיף `@expo/vector-icons` (מושך expo-font שבור). האייקונים ב-`components/Icon.js`.
+- כל שינוי במנוע — להריץ `npm run check`.
+- המשתמש לא קורא אנגלית: הודעות, תוויות ותיעוד בעברית.
