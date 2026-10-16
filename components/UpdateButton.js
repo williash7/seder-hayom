@@ -1,7 +1,10 @@
 // כפתור קבוע בצד המסך: לבקש שינוי מ-Claude, או להתקין גרסה חדשה.
 // בודק ב-GitHub אם יש בנייה חדשה יותר מזו שמותקנת, ומסמן בנקודה.
 import { useEffect, useState } from 'react';
-import { View, Pressable, Linking, Alert } from 'react-native';
+import { View, Pressable, Linking, Alert, Image } from 'react-native';
+import { captureScreen } from 'react-native-view-shot';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
 import { useT, SP } from '../lib/theme';
@@ -49,11 +52,33 @@ export default function UpdateButton() {
     } catch (e) { setOta('לא הצלחתי לבדוק: ' + String(e?.message || e)); }
   };
 
+  const [shot, setShot] = useState(null);
+  const [shotMsg, setShotMsg] = useState('');
+  const press = async () => {
+    // צילום המסך כמו שהוא עכשיו — לפני שהחלון נפתח
+    try { setShot(await captureScreen({ format: 'jpg', quality: 0.85, result: 'tmpfile' })); } catch { setShot(null); }
+    setShotMsg('');
+    setOpen(true);
+  };
+  const sendToClaude = async () => {
+    if (shot) {
+      try {
+        const perm = await MediaLibrary.requestPermissionsAsync(true);
+        if (perm.granted) { await MediaLibrary.saveToLibraryAsync(shot); setShotMsg('הצילום נשמר בגלריה — בשיחה לוחצים + ובוחרים אותו'); }
+      } catch {}
+    }
+    setTimeout(() => go(settings.chatUrl || CHAT_URL), shot ? 900 : 0);
+  };
+  const shareShot = async () => {
+    try { await Sharing.shareAsync(shot, { mimeType: 'image/jpeg', dialogTitle: 'שליחת צילום מסך' }); }
+    catch (e) { Alert.alert('לא הצלחתי לשתף', String(e?.message || e)); }
+  };
+
   const go = url => Linking.openURL(url).catch(e => Alert.alert('לא נפתח', String(e?.message || e)));
 
   return (
     <>
-      <Pressable onPress={() => setOpen(true)} hitSlop={10}
+      <Pressable onPress={press} hitSlop={10}
         style={({ pressed }) => ({
           position: 'absolute', left: 0, top: '42%',
           backgroundColor: hasNew ? t.gold : t.navy, opacity: pressed ? 0.7 : 0.9,
@@ -74,8 +99,16 @@ export default function UpdateButton() {
           <Btn title="בדוק עדכון מהיר" icon="undo" kind="line" onPress={checkOta} />
           {!!ota && <T v="small" c="sub">{ota}</T>}
           {hasNew && <Btn title="להתקין את הגרסה החדשה" icon="fwd" kind="gold" onPress={() => go(RELEASES)} />}
-          <Btn title="לבקש שינוי מ-Claude" icon="edit" kind={hasNew ? 'line' : 'primary'}
-            onPress={() => go(settings.chatUrl || CHAT_URL)} />
+          {!!shot && (
+            <View style={{ flexDirection: 'row', gap: SP.md, alignItems: 'center' }}>
+              <Image source={{ uri: shot }} style={{ width: 72, height: 150, borderRadius: 10, backgroundColor: t.sunk }} resizeMode="cover" />
+              <T v="small" c="sub" style={{ flex: 1 }}>צילום של המסך שהיה פתוח — יישמר בגלריה כדי לצרף לבקשה</T>
+            </View>
+          )}
+          <Btn title={shot ? 'לבקש שינוי מ-Claude + צילום' : 'לבקש שינוי מ-Claude'} icon="edit" kind={hasNew ? 'line' : 'primary'}
+            onPress={sendToClaude} />
+          {!!shotMsg && <T v="small" style={{ color: t.ok }}>{shotMsg}</T>}
+          {!!shot && <Btn title="לשתף את הצילום" icon="send" kind="ghost" small onPress={shareShot} />}
           {!hasNew && <Btn title="לכל הגרסאות" kind="ghost" small onPress={() => go(RELEASES)} />}
         </View>
       </Sheet>
