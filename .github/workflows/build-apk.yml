@@ -100,7 +100,26 @@ jobs:
 
       - name: בנייה
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee ../build.log
+
+      # אם הבנייה נכשלה — השגיאה נרשמת כהערה על הקומיט, כדי שאפשר יהיה לקרוא אותה בלי להוריד לוגים
+      - name: דיווח שגיאה
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [ -f build.log ] || echo "(אין build.log — הכשל היה לפני שלב הבנייה)" > build.log
+          {
+            echo "### הבנייה נכשלה"
+            echo '```'
+            grep -E "^e: |error:|FAILED|What went wrong|Execution failed|Unresolved|\.kt:[0-9]+" build.log | head -60
+            echo '---'
+            tail -60 build.log
+            echo '```'
+          } > report.md
+          gh api repos/${{ github.repository }}/commits/${{ github.sha }}/comments -F body=@report.md >/dev/null
 
       - name: שינוי שם הקובץ
         id: name
