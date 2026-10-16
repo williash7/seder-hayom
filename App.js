@@ -6,6 +6,7 @@ import { ThemeCtx, useSystemTheme, useT, R } from './lib/theme';
 import { DayProvider } from './lib/DayContext';
 import { initNotifications, askPermission } from './lib/notify';
 import Icon from './components/Icon';
+import UpdateButton from './components/UpdateButton';
 import NowScreen from './screens/NowScreen';
 import DayScreen from './screens/DayScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -61,6 +62,7 @@ function Main() {
       {tab === 'now' && <NowScreen go={setTab} />}
       {tab === 'day' && <DayScreen go={setTab} />}
       {tab === 'settings' && <SettingsScreen go={setTab} />}
+      <UpdateButton />
       <TabBar tab={tab} setTab={setTab} />
     </View>
   );
