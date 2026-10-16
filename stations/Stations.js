@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { View, Alert, AppState, Pressable } from 'react-native';
 import { useDay } from '../lib/DayContext';
 import { evaluateMinyan } from '../lib/engine';
-import { openWaze, openApp, openVideoCamera, dial, shareText } from '../lib/launch';
+import { openWaze, openApp, openAppAt, openVideoCamera, dial, shareText } from '../lib/launch';
 import { toTime, fmtDur, fmtClock, toMin, dateKey, addDays } from '../lib/time';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider, Sheet } from '../components/UI';
@@ -97,9 +97,19 @@ function Routine({ s }) {
 
 // ───────────── טקסט (ברכות השחר, ק״ש שעל המיטה) ─────────────
 function TextSt({ s, go }) {
-  const { actions, settings } = useDay();
+  const { actions, settings, dayDate } = useDay();
   const text = settings.texts?.[s.textKey];
+  const app = settings.apps?.[s.appKey];
   useEffect(() => { actions.start(s.id); }, [s.id]);
+  const open = () => openAppAt(app, s.path, { wd: dayDate.getDay() }).catch(fail);
+  if (!text && app) {
+    return (
+      <Actions>
+        <Btn title={`לפתוח ב${app.name}`} icon="book" kind="gold" onPress={open} />
+        <Btn title="אמרתי" icon="check" kind="ok" onPress={() => actions.done(s.id)} />
+      </Actions>
+    );
+  }
   return (
     <View>
       {text ? (
@@ -252,12 +262,12 @@ function Minyan({ s }) {
 
 // ───────────── לימוד (ממלא את הזמן עד העוגן הבא) ─────────────
 function Study({ s }) {
-  const { actions, settings } = useDay();
+  const { actions, settings, dayDate } = useDay();
   const app = settings.apps?.[s.appKey];
   return (
     <Actions>
-      {app && <Btn title={`פתח את ${app.name}`} icon="book" kind="gold"
-        onPress={async () => { actions.start(s.id); try { await openApp(app); } catch (e) { fail(e); } }} />}
+      {app && <Btn title={`פתח את ${app.name}${s.duration > 0 ? ` · ${fmtDur(s.duration)}` : ''}`} icon="book" kind="gold"
+        onPress={async () => { actions.start(s.id); try { await openAppAt(app, s.path, { wd: dayDate.getDay(), end: toTime(s.plannedEnd) }); } catch (e) { fail(e); } }} />}
       <Btn title="סיימתי ללמוד" icon="check" kind="line" onPress={() => actions.done(s.id)} />
     </Actions>
   );
@@ -269,7 +279,7 @@ function Prayer({ s }) {
   const wait = Math.round(s.plannedStart - now);
   return (
     <View>
-      <T v="h2" style={{ textAlign: 'center' }}>{wait > 0 ? `מתחילים ב-${toTime(s.plannedStart)} · בעוד ${fmtDur(wait)}` : `מניין ${toTime(s.plannedStart)}`}</T>
+      <T v="h2" style={{ textAlign: 'center' }}>{!s.anchor ? 'כל המניינים עברו — ביחידות' : wait > 0 ? `מתחילים ב-${toTime(s.plannedStart)} · בעוד ${fmtDur(wait)}` : `מניין ${toTime(s.plannedStart)}`}</T>
       <Actions><Btn title="התפללתי" icon="check" kind="ok" onPress={() => actions.done(s.id)} /></Actions>
     </View>
   );

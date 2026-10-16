@@ -50,6 +50,11 @@ ok(toTime(find(p, 'fri_mendele').plannedEnd) === '11:45', 'שישי — מענד
 ok(toTime(find(p, 'fri_girls').plannedEnd) === '12:00', 'שישי — הבנות עד 12:00');
 ok(toTime(find(p, 'mivtzaim').plannedEnd) === toTime(find(p, 'fri_pick1').plannedStart), 'המבצעים נמשכים עד היציאה לאיסוף');
 
+// קמים מאוחר בשישי — כל המניינים עברו: אין "איחור" לשחרית
+p = planDay({ settings: S, date: fri, state: { stations: { wake: { status: 'done', start: 636, end: 636 } } }, zmanim: z, now: 636 });
+ok(!find(p, 'shacharit').anchor && !(p.nextAnchor && p.nextAnchor.id === 'shacharit'), 'אחרי המניין האחרון — שחרית בלי עוגן ובלי איחור');
+ok(find(p, 'study_am').path.includes('{end}'), 'לימוד לפני התפילה נפתח עד שעת הסיום');
+
 // שבת — אין תחנות
 p = planDay({ settings: S, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: z, now: 540 });
 ok(p.empty, 'בשבת אין תכנית');
