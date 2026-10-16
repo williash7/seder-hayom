@@ -39,6 +39,9 @@ const tue = new Date('2026-10-20T05:00:00');
 p = planDay({ settings: S, date: tue, state: {}, zmanim: z, now: toMin('05:00') });
 ok(toTime(find(p, 'drive_mendele_tue').plannedEnd) === '12:45', 'שלישי — מענדלה ב-12:45');
 ok(!find(p, 'drive_mendele'), 'שלישי — אין איסוף של 14:00');
+ok(toTime(find(p, 'alex_shiur').plannedStart) === '11:45', 'שלישי — שיעור עם אלכס ב-11:45');
+ok(find(p, 'drive_mendele_tue').late < 1, 'שלישי — מספיקים למענדלה אחרי השיעור');
+for (let i = 1; i < p.list.length; i++) if (p.list[i].plannedStart + 0.01 < p.list[i - 1].plannedEnd) ok(false, 'שלישי — חפיפה: ' + p.list[i].title);
 ok(find(p, 'drive_mendele_tue').legs[0] === 'mendele_pick', 'מענדלה נאסף מ״יין בעיר״');
 
 // שישי — מבצעים והכנות לשבת עד הדלקת נרות

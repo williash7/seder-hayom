@@ -3,9 +3,16 @@ name: בניית APK
 # כל דחיפה ל-main בונה APK חדש ומפרסמת אותו ב-Releases.
 # אפשר גם ידנית: Actions ← "בניית APK" ← Run workflow.
 on:
+  # APK נבנה רק כשמשתנה משהו נייטיב. שינויי JS מגיעים כעדכון מיידי (ota-update.yml).
   push:
     branches: [main]
-    paths-ignore: ['**.md']
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'app.json'
+      - 'modules/**'
+      - 'assets/**'
+      - 'scripts/sign-android.js'
   workflow_dispatch:
 
 concurrency:
