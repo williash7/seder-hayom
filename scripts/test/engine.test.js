@@ -39,12 +39,16 @@ const tue = new Date('2026-10-20T05:00:00');
 p = planDay({ settings: S, date: tue, state: {}, zmanim: z, now: toMin('05:00') });
 ok(toTime(find(p, 'drive_mendele_tue').plannedEnd) === '12:45', 'שלישי — מענדלה ב-12:45');
 ok(!find(p, 'drive_mendele'), 'שלישי — אין איסוף של 14:00');
+ok(find(p, 'drive_mendele_tue').legs[0] === 'mendele_pick', 'מענדלה נאסף מ״יין בעיר״');
 
 // שישי — מבצעים והכנות לשבת עד הדלקת נרות
 const fri = new Date('2026-10-23T05:00:00');
 p = planDay({ settings: S, date: fri, state: {}, zmanim: z, now: toMin('05:00') });
 ok(!!find(p, 'mivtzaim') && !find(p, 'kollel'), 'שישי — מבצעים במקום כולל');
 ok(toTime(find(p, 'shabbat_prep').plannedEnd) === '17:08', 'הכנות לשבת נגמרות בהדלקת נרות');
+ok(toTime(find(p, 'fri_mendele').plannedEnd) === '11:45', 'שישי — מענדלה עד 11:45');
+ok(toTime(find(p, 'fri_girls').plannedEnd) === '12:00', 'שישי — הבנות עד 12:00');
+ok(toTime(find(p, 'mivtzaim').plannedEnd) === toTime(find(p, 'fri_pick1').plannedStart), 'המבצעים נמשכים עד היציאה לאיסוף');
 
 // שבת — אין תחנות
 p = planDay({ settings: S, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: z, now: 540 });
