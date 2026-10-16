@@ -46,10 +46,17 @@
           "color": "#C9A227",
           "defaultChannel": "stations"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": false
+        }
       ]
     ],
     "extra": {
-      "releaseName": "0.1"
+      "releaseName": "0.2"
     }
   }
 }

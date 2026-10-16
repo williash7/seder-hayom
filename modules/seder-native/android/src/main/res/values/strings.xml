@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="seder_lock_label">סדר היום — זמן בית</string>
+  <string name="seder_lock_description">בזמן בית, רק האפליקציות שאישרת נפתחות. כל אפליקציה אחרת מחזירה לסדר היום, שם כותבים בשביל מה צריך אותה. השירות רושם איזו אפליקציה פתוחה ומתי — כדי להראות לך כמה זמן היית בכל אחת. שום מידע לא יוצא מהטלפון.</string>
+</resources>

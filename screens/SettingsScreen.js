@@ -1,6 +1,8 @@
 // הגדרות — כל מה שקובע את סדר היום
-import { useState } from 'react';
-import { View, ScrollView, Alert, Switch, Pressable } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, ScrollView, Alert, Switch, Pressable, AppState } from 'react-native';
+import * as Native from '../lib/native';
+import { geoPermissionState, askGeoPermission } from '../lib/geo';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -84,12 +86,7 @@ function General({ settings, save, actions }) {
           <Row label="נסגר סופית"><Field value={settings.dayClose.hardClose} onChangeText={v => save({ dayClose: { ...settings.dayClose, hardClose: v } })} /></Row>
         </Card>
       </Section>
-      <Section title="הרשאות">
-        <Card style={{ gap: SP.sm }}>
-          <Btn title="לאשר התראות" kind="line" small onPress={async () => Alert.alert(await askPermission() ? 'מאושר ✓' : 'לא אושר — אפשר להפעיל בהגדרות הטלפון')} />
-          <T v="small" c="sub">נעילת זמן בית אמיתית ומעקב אחרי מה פתחת בטלפון — בגרסה הבאה (צריכה הרשאת נגישות).</T>
-        </Card>
-      </Section>
+      <Permissions />
       <Section title="איפוס">
         <Card style={{ gap: SP.sm }}>
           <Btn title="לאפס את התחנות של היום" kind="line" small onPress={() => actions.resetToday()} />
@@ -102,6 +99,51 @@ function General({ settings, save, actions }) {
         סדר היום · גרסה {Constants.expoConfig?.extra?.releaseName || ''}
       </T>
     </>
+  );
+}
+
+function Permissions() {
+  const [st, setSt] = useState({});
+  const refresh = async () => {
+    const n = await Notifications.getPermissionsAsync().catch(() => ({}));
+    const g = await geoPermissionState();
+    setSt({
+      notif: !!n.granted,
+      full: Native.canFullScreen(),
+      exact: Native.canExactAlarm(),
+      lock: Native.isLockServiceOn(),
+      geo: g.background,
+    });
+  };
+  useEffect(() => {
+    refresh();
+    const sub = AppState.addEventListener('change', s => s === 'active' && refresh());
+    return () => sub.remove();
+  }, []);
+  const rows = [
+    ['notif', 'התראות', 'תזכורות לתחנות וסגירת יום', async () => { await askPermission(); refresh(); }],
+    ['full', 'שעון מעורר על מסך מלא', 'מצלצל מעל מסך הנעילה', () => Native.openFullScreenSettings()],
+    ['exact', 'שעון מדויק', 'שההשכמה תצלצל בדקה המדויקת', () => Native.openExactAlarmSettings()],
+    ['lock', 'נעילת זמן בית', 'בהגדרות הנגישות: "סדר היום — זמן בית" ← להפעיל', () => Native.openAccessibilitySettings()],
+    ['geo', 'מיקום — "כל הזמן"', 'כדי שהנסיעות יתקדמו לבד כשמגיעים', async () => { await askGeoPermission(); refresh(); }],
+  ];
+  return (
+    <Section title="הרשאות">
+      <Card>
+        {rows.map(([k, label, sub, fix], i) => (
+          <View key={k}>
+            {i > 0 && <Divider />}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm, paddingVertical: 10 }}>
+              <View style={{ flex: 1 }}>
+                <T v="bodyB">{st[k] ? '✓ ' : ''}{label}</T>
+                <T v="small" c="sub">{sub}</T>
+              </View>
+              {!st[k] && <Btn title="להפעיל" small kind="line" onPress={fix} />}
+            </View>
+          </View>
+        ))}
+      </Card>
+    </Section>
   );
 }
 
@@ -194,6 +236,11 @@ function Calls({ settings, save }) {
         <Field value={url} onChangeText={v => save({ calls: { ...settings.calls, url: v.trim() } })} placeholder="https://script.google.com/macros/s/…/exec" />
         <Btn title="בדיקת חיבור" kind="line" small onPress={test} />
         {!!msg && <T v="small">{msg}</T>}
+      </Card>
+      <Card style={{ gap: SP.sm, marginTop: SP.lg }}>
+        <T v="bodyB">משימות מה-CRM</T>
+        <T c="sub">כתובת הסקריפט של ה-CRM (מסתיימת ב-/exec). קריאה בלבד — שום דבר לא נכתב ל-CRM.</T>
+        <Field value={settings.crm?.url || ''} onChangeText={v => save({ crm: { ...settings.crm, url: v.trim() } })} placeholder="https://script.google.com/macros/s/…/exec" />
       </Card>
       <T v="small" c="sub" style={{ marginTop: SP.md }}>
         בלי גיליון מחובר, אפשר לנהל רשימת טלפונים קצרה בתוך האפליקציה (בתחנת המשימות).

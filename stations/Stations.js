@@ -9,6 +9,8 @@ import { toTime, fmtDur, fmtClock, toMin, dateKey, addDays } from '../lib/time';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider, Sheet } from '../components/UI';
 import { fetchPeople, whoToCall, firstPhone, loadCallLog, logCall } from '../lib/callsApi';
+import * as Native from '../lib/native';
+import { fetchCrmTasks, crmDone, toggleCrmDone } from '../lib/crmTasks';
 import Icon from '../components/Icon';
 
 const fail = e => Alert.alert('לא הצלחתי', String(e?.message || e));
@@ -380,8 +382,32 @@ function Tasks({ s }) {
         <Field value={draft} onChangeText={setDraft} placeholder="משימה חדשה להיום" style={{ flex: 1 }} onSubmitEditing={add} />
         <Btn title="+" small onPress={add} />
       </View>
+      <CrmTasks />
       {open.length === 0 && <CallList />}
       <Actions><Btn title="סיימתי" icon="check" kind="line" onPress={() => actions.done(s.id)} /></Actions>
+    </View>
+  );
+}
+
+function CrmTasks() {
+  const { settings, dayKey } = useDay();
+  const [list, setList] = useState([]);
+  const [done, setDone] = useState({});
+  const url = settings.crm?.url;
+  useEffect(() => {
+    if (!url) return;
+    fetchCrmTasks(url, dayKey).then(setList);
+    crmDone().then(setDone);
+  }, [url, dayKey]);
+  if (!url || !list.length) return null;
+  return (
+    <View style={{ marginTop: SP.lg }}>
+      <T v="tiny" c="sub">מה-CRM</T>
+      {list.map(x => (
+        <Check key={x.id} label={x.title} checked={!!done[x.id]}
+          sub={[x.group, x.overdue && `מ-${x.date}`, x.time].filter(Boolean).join(' · ')}
+          onPress={() => toggleCrmDone(x.id, dayKey).then(setDone)} />
+      ))}
     </View>
   );
 }
@@ -503,17 +529,30 @@ function Home({ s }) {
   const d = s.rec?.data || {};
   const [reason, setReason] = useState('');
   const [mins, setMins] = useState(settings.homeTime?.defaultUnlockMin || 10);
+  const [usage, setUsage] = useState([]);
+  const [lockOn, setLockOn] = useState(true);
   const checks = (settings.homeChecks || []).filter(c => !c.days || c.days.includes(dayDate.getDay()));
   const allowed = (settings.homeTime?.allowed || []).map(k => ({ k, ...settings.apps?.[k] })).filter(a => a.name);
   const log = d.log || [];
-  const unlockUntil = d.unlockUntil;
   const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+  const unlockUntil = d.unlockUntil;
   const unlocked = unlockUntil != null && nowM < unlockUntil;
+
+  useEffect(() => {
+    const load = () => {
+      const from = new Date(dayDate); from.setHours(0, 0, 0, 0);
+      setUsage((Native.usageSince(from.getTime()) || []).filter(u => u.minutes >= 1).slice(0, 8));
+      setLockOn(Native.isLockServiceOn());
+    };
+    load();
+    const sub = AppState.addEventListener('change', st => st === 'active' && load());
+    return () => sub.remove();
+  }, [dayDate]);
 
   const unlock = () => {
     if (!reason.trim()) { Alert.alert('זמן בית', 'כתוב קודם בשביל מה צריך את הטלפון'); return; }
-    actions.start(s.id);
-    actions.setData(s.id, { unlockUntil: nowM + mins, log: [...log, { at: toTime(nowM), reason: reason.trim(), minutes: mins }] });
+    actions.unlockApp(null, null, reason.trim(), mins);
+    actions.setData(s.id, { unlockUntil: nowM + mins });
     setReason('');
   };
 
@@ -523,6 +562,14 @@ function Home({ s }) {
         <Check key={c.id} label={c.label} checked={!!d.checks?.[c.id]}
           onPress={() => actions.setData(s.id, { checks: { ...(d.checks || {}), [c.id]: !d.checks?.[c.id] } })} />
       ))}
+
+      {Native.hasNative && !lockOn && (
+        <Card tone="warn" style={{ marginTop: SP.md }}>
+          <T v="bodyB">הנעילה עוד לא פעילה</T>
+          <T v="small" c="sub" style={{ marginTop: 4 }}>צריך להפעיל פעם אחת את "סדר היום — זמן בית" בהגדרות הנגישות של הטלפון.</T>
+          <Btn title="להפעלה" small kind="line" style={{ marginTop: SP.sm, alignSelf: 'flex-start' }} onPress={() => Native.openAccessibilitySettings()} />
+        </Card>
+      )}
 
       <T v="tiny" c="sub" style={{ marginTop: SP.lg, marginBottom: SP.sm }}>פתוח בזמן בית</T>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm }}>
@@ -546,8 +593,24 @@ function Home({ s }) {
 
       {log.length > 0 && (
         <View style={{ marginTop: SP.lg }}>
-          <T v="tiny" c="sub">מה פתחת היום</T>
-          {log.map((l, i) => <T key={i} v="small" style={{ marginTop: 4 }}>{l.at} · {l.reason} ({l.minutes} דק׳)</T>)}
+          <T v="tiny" c="sub">בשביל מה פתחת</T>
+          {log.map((l, i) => (
+            <T key={i} v="small" style={{ marginTop: 4 }}>
+              {typeof l.at === 'number' ? toTime(l.at) : l.at} · {l.app ? `${l.app} — ` : ''}{l.reason} ({l.minutes} דק׳)
+            </T>
+          ))}
+        </View>
+      )}
+
+      {usage.length > 0 && (
+        <View style={{ marginTop: SP.lg }}>
+          <T v="tiny" c="sub">הזמן בטלפון היום</T>
+          {usage.map(u => (
+            <View key={u.pkg} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+              <T v="small">{u.label}</T>
+              <T v="small" c="sub">{fmtDur(u.minutes)} · {u.opens} פתיחות</T>
+            </View>
+          ))}
         </View>
       )}
       <Actions><Btn title="סיום זמן בית" icon="check" kind="line" onPress={() => actions.done(s.id)} /></Actions>
