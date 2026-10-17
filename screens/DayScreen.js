@@ -8,6 +8,60 @@ import { T, Btn, Card, Sheet, Chip } from '../components/UI';
 import Icon from '../components/Icon';
 import { toTime, fmtDur, DAY_NAMES } from '../lib/time';
 import { STATION_TYPES } from '../lib/defaults';
+import { useEffect } from 'react';
+import { AppState } from 'react-native';
+import * as S from '../lib/store';
+import * as Native from '../lib/native';
+import { dateKey, addDays } from '../lib/time';
+
+/** יומן הטלפון: בשביל מה פתחתי, וכמה זמן בכל אפליקציה — לפי יום */
+function PhoneLog() {
+  const t = useT();
+  const [off, setOff] = useState(0);
+  const [log, setLog] = useState([]);
+  const [usage, setUsage] = useState([]);
+  const day = addDays(new Date(), -off);
+  useEffect(() => {
+    const load = () => {
+      S.loadHomeLog(dateKey(day)).then(setLog);
+      const from = new Date(day); from.setHours(0, 0, 0, 0);
+      const to = new Date(from); to.setDate(to.getDate() + 1);
+      const all = off === 0 ? (Native.usageSince(from.getTime()) || []) : [];
+      setUsage(all.filter(u => u.minutes >= 1).slice(0, 10));
+    };
+    load();
+    const sub = AppState.addEventListener('change', s => s === 'active' && load());
+    return () => sub.remove();
+  }, [off]);
+  const total = usage.reduce((a, u) => a + u.minutes, 0);
+  return (
+    <Card style={{ marginTop: SP.xl }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <T v="bodyB">יומן הטלפון</T>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <Chip label="היום" active={off === 0} onPress={() => setOff(0)} />
+          <Chip label="אתמול" active={off === 1} onPress={() => setOff(1)} />
+          <Chip label="שלשום" active={off === 2} onPress={() => setOff(2)} />
+        </View>
+      </View>
+      <T v="tiny" c="sub" style={{ marginTop: SP.md }}>בשביל מה פתחתי</T>
+      {log.length ? log.map((l, i) => (
+        <T key={i} v="small" style={{ marginTop: 4 }}>{l.at} · {l.app ? `${l.app} — ` : ''}{l.reason} ({l.minutes} דק׳{l.mode ? `, ${l.mode}` : ''})</T>
+      )) : <T v="small" c="sub" style={{ marginTop: 4 }}>לא נפתח כלום מחוץ למותר</T>}
+      {off === 0 && (
+        <>
+          <T v="tiny" c="sub" style={{ marginTop: SP.md }}>הזמן בטלפון היום{total ? ` · ${fmtDur(total)}` : ''}</T>
+          {usage.length ? usage.map(u => (
+            <View key={u.pkg} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+              <T v="small">{u.label}</T><T v="small" c="sub">{fmtDur(u.minutes)} · {u.opens} פתיחות</T>
+            </View>
+          )) : <T v="small" c="sub" style={{ marginTop: 4 }}>{Native.isLockServiceOn() ? 'עוד אין נתונים' : 'כדי לראות זמן שימוש — להפעיל את "סדר היום — זמן בית" בנגישות'}</T>}
+        </>
+      )}
+      <T v="small" c="faint" style={{ marginTop: SP.md }}>נשמר רק בטלפון. זמן השימוש נשמר כ-3,000 מעברים אחרונים (כשבועיים).</T>
+    </Card>
+  );
+}
 
 export default function DayScreen({ go }) {
   const t = useT();
@@ -72,6 +126,7 @@ export default function DayScreen({ go }) {
         </View>
 
         {plan.empty && <Card tone="sunk"><T c="sub">אין תחנות ליום הזה.</T></Card>}
+        <PhoneLog />
         <Btn title="לאפס את היום" kind="ghost" small style={{ marginTop: SP.xl }} onPress={() => actions.resetToday()} />
       </ScrollView>
 
