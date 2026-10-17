@@ -89,13 +89,14 @@ ok(wt.every(l => l.date >= '2026-10-20') && wt.some(l => l.title.includes('אל�
 p = planDay({ settings: S, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: { ...z, havdala: '18:45' }, now: 540 });
 ok(!!find(p, 'showers_motzash'), 'מוצ״ש — מקלחות');
 
-// כביסת חולצות — כל 3 ימים, שישי מוקדם לחמישי
-const days = [];
-for (let i = 0; i < 14; i++) {
-  const d = new Date(2026, 9, 18 + i, 12);
-  if (planDay({ settings: S, date: d, state: {}, zmanim: { ...z, havdala: '18:45' }, now: 300 }).list.some(x => x.id.startsWith('laundry'))) days.push(d.getDate());
+// כביסת חולצות — כל 3 ימים מ-17.10; שישי מוקדם לחמישי (ואז 2 חולצות)
+const wash = [];
+for (let i = 0; i < 21; i++) {
+  const d = new Date(2026, 9, 17 + i, 12);
+  const st = planDay({ settings: S, date: d, state: {}, zmanim: { ...z, havdala: '18:45' }, now: 300 }).list.find(x => x.id.startsWith('laundry'));
+  if (st) wash.push(`${d.getDate()}:${st.steps.filter(x => x.nth).length}`);
 }
-ok(JSON.stringify(days) === JSON.stringify([18, 21, 24, 27, 29]), 'כביסה כל 3 ימים, שישי 30 הוקדם לחמישי 29 — ' + days.join(','));
+ok(wash.join(',') === '17:3,20:3,22:2,25:3,28:3,31:3,3:3,5:2', 'כביסה — ' + wash.join(','));
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
