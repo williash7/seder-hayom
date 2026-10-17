@@ -75,8 +75,9 @@ p = planDay({ settings: S, date: fri, state: {}, zmanim: z, now: toMin('05:00') 
 ok(find(p, 'study_post').duration <= 30 && find(p, 'mivtzaim').duration > 30, 'שישי — עד חצי שעה לימוד, והשאר למבצעים');
 
 // שבת — אין תחנות
-p = planDay({ settings: S, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: z, now: 540 });
-ok(p.empty, 'בשבת אין תכנית');
+p = planDay({ settings: S, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: { ...z, havdala: '18:45' }, now: 540 });
+ok(p.current?.id === 'motzash' && toTime(p.current.plannedStart) === '18:45', 'שבת — התכנית מתחילה רק בצאת השבת');
+ok(!find(p, 'shacharit') && !find(p, 'wake'), 'שבת — אין תחנות של יום חול');
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');

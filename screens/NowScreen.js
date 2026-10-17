@@ -44,7 +44,7 @@ export default function NowScreen({ go }) {
     <BlockedSheet />
   </>);
 
-  if (inShabbat || (plan.empty && dow === 6)) {
+  if (inShabbat) {
     return wrap(
       <Center icon="candle" title="שבת שלום" sub={zmanim.havdala ? `צאת השבת ${zmanim.havdala}` : 'האפליקציה נחה בשבת'} />
     );
