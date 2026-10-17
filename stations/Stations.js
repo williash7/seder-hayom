@@ -686,7 +686,7 @@ function Sleep({ s }) {
   const { actions, settings } = useDay();
   return (
     <View>
-      <T v="body" c="sub" style={{ textAlign: 'center' }}>השכמה מחר ב-{settings.wakeTime}. הטלפון הולך לישון.</T>
+      <T v="body" c="sub" style={{ textAlign: 'center' }}>השכמה מחר ב-{settings.wakeTime}. אחרי "לילה טוב" הטלפון ננעל — פתוחים רק השעון והטלפון.</T>
       <Actions><Btn title="לילה טוב" icon="moon" onPress={() => actions.done(s.id)} /></Actions>
     </View>
   );

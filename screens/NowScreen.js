@@ -16,7 +16,7 @@ function KeepAwake() { useKeepAwake(); return null; }
 export default function NowScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan, now, hebrew, dayDate, zmanim, settings, actions, loaded } = useDay();
+  const { plan, now, hebrew, dayDate, zmanim, settings, actions, loaded, night, nightUntil } = useDay();
   const sec = useSeconds();
   if (!loaded) return <View style={{ flex: 1, backgroundColor: t.bg }} />;
 
@@ -24,7 +24,15 @@ export default function NowScreen({ go }) {
   const inShabbat = (dow === 5 && zmanim.candles && now >= toMin(zmanim.candles))
     || (dow === 6 && (!zmanim.havdala || now < toMin(zmanim.havdala)));
 
-  const header = (
+  const nightBar = night ? (
+    <View style={{ backgroundColor: t.navy, borderRadius: R.md, padding: SP.md, marginBottom: SP.md, flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
+      <Icon name="moon" size={20} color={t.onNavy} />
+      <T v="small" style={{ color: t.onNavy, flex: 1 }}>
+        הטלפון ישן עד {toTime(new Date(nightUntil).getHours() * 60 + new Date(nightUntil).getMinutes())} — פתוחים רק השעון והטלפון. אפליקציה אחרת תשאל בשביל מה.
+      </T>
+    </View>
+  ) : null;
+  const header = (<>{nightBar}
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
       <View>
         <T v="tiny" c="sub">יום {DAY_NAMES[dow]}{hebrew ? ` · ${hebrew}` : ''}</T>
@@ -32,7 +40,7 @@ export default function NowScreen({ go }) {
       </View>
       {plan.nextAnchor && <AnchorPill a={plan.nextAnchor} now={now} />}
     </View>
-  );
+  </>);
 
   const wrap = body => (<>
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }}
