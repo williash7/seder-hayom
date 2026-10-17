@@ -74,13 +74,18 @@ export default function NowScreen({ go }) {
     <>
       {['routine', 'timer', 'text', 'counter'].includes(s.type) && startedAt != null ? <KeepAwake /> : null}
       <View style={{ alignItems: 'center', marginTop: SP.xl }}>
-        <Ring size={210} p={isWaiting ? 0 : elapsed / total} color={over ? t.warn : t.gold}>
+        <Ring size={210} p={isWaiting ? 0 : Math.min(1, elapsed / total)} color={over && s.type !== 'open' ? t.warn : t.gold}>
           <Icon name={s.icon || 'now'} size={30} color={t.gold} />
           {isWaiting ? (
             <>
               <T v="small" c="sub" style={{ marginTop: 6 }}>מתחיל ב-</T>
               <T v="clock">{toTime(s.plannedStart)}</T>
               <T v="small" c="sub">בעוד {fmtDur(waitingMin)}</T>
+            </>
+          ) : s.type === 'open' && startedAt != null ? (
+            <>
+              <T v="clock" style={{ marginTop: 6 }}>{fmtClock(sec - startedAt * 60)}</T>
+              <T v="small" c="sub">בדרך כלל כ-{fmtDur(s.duration)}</T>
             </>
           ) : s.duration > 0 ? (
             <>

@@ -98,5 +98,14 @@ for (let i = 0; i < 21; i++) {
 }
 ok(wash.join(',') === '17:3,20:3,22:2,25:3,28:3,31:3,3:3,5:2', 'כביסה — ' + wash.join(','));
 
+// השכבת הילדים — בכל ערב כולל מוצ״ש, משך נלמד
+import { applyLearned } from '../../lib/learn';
+const S2 = applyLearned(S, { bedtime_kids: [40, 50, 45] });
+p = planDay({ settings: S2, date: sun, state: {}, zmanim: z, now: 300 });
+ok(Math.round(find(p, 'bedtime_kids').duration) === 45, 'השכבה — 45 דק׳ לפי הממוצע שנלמד');
+ok(find(p, 'bedtime_kids').plannedStart === find(p, 'showers').plannedEnd, 'השכבה מיד אחרי המקלחות');
+p = planDay({ settings: S2, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: { ...z, havdala: '18:45' }, now: 540 });
+ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');

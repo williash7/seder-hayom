@@ -702,10 +702,44 @@ function Shabbat({ s }) {
   );
 }
 
+// ───────────── תחנה פתוחה — השכבת הילדים ─────────────
+function Open({ s }) {
+  const { actions } = useDay();
+  const t = useT();
+  const sec = useSeconds();
+  const d = s.rec?.data || {};
+  const started = s.rec?.start != null;
+  const elapsed = started ? sec - s.rec.start * 60 : 0;
+  const marks = d.items || {};
+  const toggle = it => actions.setData(s.id, { items: { ...marks, [it]: !marks[it] } });
+  if (!started) {
+    return (
+      <View>
+        {(s.items || []).map(it => <T key={it} style={{ paddingVertical: 6 }}>• {it}</T>)}
+        <T v="small" c="sub" style={{ marginTop: SP.sm }}>
+          {s.learnedFrom ? `בדרך כלל לוקח כ-${fmtDur(s.minutes)} (ממוצע של ${s.learnedFrom} ערבים)` : 'האפליקציה תלמד כמה זמן זה לוקח'}
+        </T>
+        <Actions><Btn title="מתחילים" icon="play" kind="gold" onPress={() => actions.start(s.id)} /></Actions>
+      </View>
+    );
+  }
+  return (
+    <View>
+      <Card tone="sunk" style={{ alignItems: 'center' }}>
+        <T v="small" c="sub">עבר</T>
+        <T v="clock">{fmtClock(elapsed)}</T>
+        {s.nudgeEvery && <T v="small" c="sub">רטט שקט כל {s.nudgeEvery} דק׳ — "כולם ישנים?"</T>}
+      </Card>
+      {(s.items || []).map(it => <Check key={it} label={it} checked={!!marks[it]} onPress={() => toggle(it)} />)}
+      <Actions><Btn title="כולם ישנים" icon="moon" kind="ok" onPress={() => actions.done(s.id)} /></Actions>
+    </View>
+  );
+}
+
 const MAP = {
   wake: Wake, routine: Routine, text: TextSt, checklist: Checklist, timer: Timer, drive: Drive,
   minyan: Minyan, study: Study, prayer: Prayer, note: Note, camera: Camera, app: AppSt,
-  counter: Counter, tasks: Tasks, home: Home, plan: Plan, close: Close, sleep: Sleep, shabbat: Shabbat,
+  open: Open, counter: Counter, tasks: Tasks, home: Home, plan: Plan, close: Close, sleep: Sleep, shabbat: Shabbat,
 };
 
 export default function StationBody({ s, go }) {
