@@ -118,6 +118,10 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const L2 = find(q, 'laundry');
   ok(L2 && toTime(L2.plannedStart) === toTime(find(q, 'bedtime_kids').plannedEnd), 'שני (בלי שיעור) — הכביסה מיד אחרי שהילדים נרדמו, ב-' + toTime(L2.plannedStart));
   for (let i = 1; i < q.list.length; i++) if (q.list[i].plannedStart + 0.01 < q.list[i - 1].plannedEnd) ok(false, 'חפיפה: ' + q.list[i].title);
+  // מוצ״ש — אין שום דבר קבוע בהמשך הערב: הכביסה מיד אחרי ההשכבה, לפני הזמן הפנוי
+  q = planDay({ settings: S2, date: new Date(2026, 9, 17, 21), state: {}, zmanim: { ...z, havdala: '18:41' }, now: 20 * 60 });
+  const ids = q.list.map(x => x.id);
+  ok(ids.indexOf('laundry_motzash') === ids.indexOf('bedtime_kids_motzash') + 1, 'מוצ״ש — כביסה מיד אחרי השכבת הילדים: ' + ids.join(' > '));
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
