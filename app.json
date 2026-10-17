@@ -84,8 +84,6 @@
         "expo-channel-name": "preview"
       }
     },
-    "runtimeVersion": {
-      "policy": "fingerprint"
-    }
+    "runtimeVersion": "d1d28a17ef53e926ce0d20bd96fe04c63f5264d3"
   }
 }
