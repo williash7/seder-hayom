@@ -107,5 +107,18 @@ ok(find(p, 'bedtime_kids').plannedStart === find(p, 'showers').plannedEnd, 'הש
 p = planDay({ settings: S2, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: { ...z, havdala: '18:45' }, now: 540 });
 ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 
+// כביסה גמישה — נכנסת לזמן הפנוי הראשון שמספיק לה
+{
+  const tue = new Date(2026, 9, 20, 12), mon = new Date(2026, 9, 19, 12);   // 20.10 יום כביסה, 19.10 לא
+  const S3 = { ...S2, stations: S2.stations.map(x => x.id === 'laundry' ? { ...x, from: '2026-10-19' } : x) }; // לבדיקה: גם ב-19
+  let q = planDay({ settings: S2, date: tue, state: {}, zmanim: z, now: 300 });
+  const L = find(q, 'laundry'), pt = find(q, 'plan_tomorrow');
+  ok(L && L.plannedStart >= find(q, 'drive_home3').plannedEnd - 0.5, 'שלישי (שיעור ערב) — הכביסה אחרי החזרה מהמעריב, ב-' + toTime(L.plannedStart));
+  q = planDay({ settings: S3, date: mon, state: {}, zmanim: z, now: 300 });
+  const L2 = find(q, 'laundry');
+  ok(L2 && toTime(L2.plannedStart) === toTime(find(q, 'bedtime_kids').plannedEnd), 'שני (בלי שיעור) — הכביסה מיד אחרי שהילדים נרדמו, ב-' + toTime(L2.plannedStart));
+  for (let i = 1; i < q.list.length; i++) if (q.list[i].plannedStart + 0.01 < q.list[i - 1].plannedEnd) ok(false, 'חפיפה: ' + q.list[i].title);
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
