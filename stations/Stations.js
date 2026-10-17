@@ -11,6 +11,7 @@ import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider, Sheet } from '../co
 import { fetchPeople, whoToCall, firstPhone, loadCallLog, logCall } from '../lib/callsApi';
 import * as Native from '../lib/native';
 import { fetchCrmTasks, crmDone, toggleCrmDone } from '../lib/crmTasks';
+import { weekLessons, loadPrep, savePrep } from '../lib/lessons';
 import Icon from '../components/Icon';
 
 const fail = e => Alert.alert('לא הצלחתי', String(e?.message || e));
@@ -383,6 +384,7 @@ function Tasks({ s }) {
         <Btn title="+" small onPress={add} />
       </View>
       <CrmTasks />
+      <LessonsWeek />
       {open.length === 0 && <CallList />}
       <Actions><Btn title="סיימתי" icon="check" kind="line" onPress={() => actions.done(s.id)} /></Actions>
     </View>
@@ -563,6 +565,8 @@ function Home({ s }) {
           onPress={() => actions.setData(s.id, { checks: { ...(d.checks || {}), [c.id]: !d.checks?.[c.id] } })} />
       ))}
 
+      <LessonsWeek />
+
       {Native.hasNative && !lockOn && (
         <Card tone="warn" style={{ marginTop: SP.md }}>
           <T v="bodyB">הנעילה עוד לא פעילה</T>
@@ -618,6 +622,28 @@ function Home({ s }) {
   );
 }
 
+// ───────────── השיעורים השבוע — מופיע בכל זמן פנוי ─────────────
+export function LessonsWeek() {
+  const { settings, dayDate } = useDay();
+  const t = useT();
+  const [prep, setPrep] = useState({});
+  useEffect(() => { loadPrep().then(setPrep); }, []);
+  const list = weekLessons(settings, dayDate);
+  if (!list.length) return null;
+  const toggle = k => { const n = { ...prep, [k]: !prep[k] }; setPrep(n); savePrep(n); };
+  const left = list.filter(l => !prep[l.key]).length;
+  return (
+    <Card tone={left ? 'gold' : 'ok'} style={{ marginTop: SP.lg }}>
+      <T v="tiny" c="sub">השיעורים השבוע · {left ? `${left} עוד לא הוכנו` : 'הכל מוכן ✓'}</T>
+      {list.map(l => (
+        <Check key={l.key} label={l.title} checked={!!prep[l.key]}
+          sub={`${l.isToday ? 'היום' : `יום ${l.day}`}${l.at ? ` · ${l.at}` : ''}${prep[l.key] ? ' · הוכן' : ''}`}
+          onPress={() => toggle(l.key)} />
+      ))}
+    </Card>
+  );
+}
+
 // ───────────── משימות למחר ─────────────
 function Plan({ s }) {
   const { actions, tasks, tomorrowKey } = useDay();
@@ -636,6 +662,7 @@ function Plan({ s }) {
         <Field value={draft} onChangeText={setDraft} placeholder="מה צריך מחר?" style={{ flex: 1 }} onSubmitEditing={add} autoFocus />
         <Btn title="+" small onPress={add} />
       </View>
+      <LessonsWeek />
       <Actions><Btn title={list.length ? 'זהו למחר' : 'אין משהו מיוחד'} icon="check" kind="ok" onPress={() => actions.done(s.id)} /></Actions>
     </View>
   );

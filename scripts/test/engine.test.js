@@ -2,6 +2,7 @@
 import { planDay, evaluateMinyan } from '../../lib/engine';
 import { DEFAULT_SETTINGS as S } from '../../lib/defaults';
 import { toMin, toTime } from '../../lib/time';
+import { weekLessons } from '../../lib/lessons';
 
 let failed = 0;
 const ok = (cond, msg) => { if (!cond) { failed++; console.error('✗ ' + msg); } else console.log('✓ ' + msg); };
@@ -78,6 +79,15 @@ ok(find(p, 'study_post').duration <= 30 && find(p, 'mivtzaim').duration > 30, '�
 p = planDay({ settings: S, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: { ...z, havdala: '18:45' }, now: 540 });
 ok(p.current?.id === 'motzash' && toTime(p.current.plannedStart) === '18:45', 'שבת — התכנית מתחילה רק בצאת השבת');
 ok(!find(p, 'shacharit') && !find(p, 'wake'), 'שבת — אין תחנות של יום חול');
+
+// השיעורים השבוע
+const wl = weekLessons(S, new Date('2026-10-17T20:00:00'));  // מוצאי שבת → השבוע הבא
+ok(wl.length === 8, 'מוצ״ש — 8 שיעורים בשבוע הבא (5 כולל, 2 ערב, אלכס) — יצא ' + wl.length);
+ok(wl[0].date === '2026-10-18' && wl[0].at === '10:00', 'הראשון — כולל ביום ראשון');
+const wt = weekLessons(S, new Date('2026-10-20T09:00:00'));  // שלישי
+ok(wt.every(l => l.date >= '2026-10-20') && wt.some(l => l.title.includes('אלכס')), 'שלישי — רק מהיום והלאה, כולל אלכס');
+p = planDay({ settings: S, date: new Date('2026-10-24T09:00:00'), state: {}, zmanim: { ...z, havdala: '18:45' }, now: 540 });
+ok(!!find(p, 'showers_motzash'), 'מוצ״ש — מקלחות');
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
