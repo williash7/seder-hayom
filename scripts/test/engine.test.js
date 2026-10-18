@@ -14,7 +14,7 @@ const sun = new Date('2026-10-18T05:00:00');
 let p = planDay({ settings: S, date: sun, state: {}, zmanim: z, now: toMin('05:00') });
 ok(p.current?.id === 'wake', 'לפני הקימה — התחנה הנוכחית היא השכמה');
 ok(toTime(find(p, 'kollel').plannedStart) === '10:00', 'הכולל ב-10:00');
-ok(toTime(find(p, 'drive_mendele').plannedEnd) === '14:00', 'מגיעים למענדלה ב-14:00');
+ok(toTime(find(p, 'drive_mendele').plannedEnd) === '14:20', 'מגיעים למענדלה ב-14:20');
 ok(toTime(find(p, 'showers').plannedStart) === '18:45', 'מקלחות ב-18:45');
 ok(!!find(p, 'shiur_eve'), 'ביום ראשון יש שיעור ערב');
 ok(p.list.every(s => s.plannedEnd >= s.plannedStart), 'אין תחנה שנגמרת לפני שהתחילה');

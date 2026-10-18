@@ -8,7 +8,7 @@ import { openWaze, openApp, openAppAt, openVideoCamera, dial, shareText } from '
 import { toTime, fmtDur, fmtClock, toMin, dateKey, addDays } from '../lib/time';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider, Sheet } from '../components/UI';
-import { fetchPeople, whoToCall, firstPhone, loadCallLog, logCall } from '../lib/callsApi';
+import { fetchPeople, whoToCall, firstPhone, loadCallLog, logCall, PUBLIC_SHEET } from '../lib/callsApi';
 import * as Native from '../lib/native';
 import { fetchCrmTasks, crmDone, toggleCrmDone } from '../lib/crmTasks';
 import { weekLessons, loadPrep, savePrep } from '../lib/lessons';
@@ -434,7 +434,7 @@ function Tasks({ s }) {
       </View>
       <CrmTasks />
       <LessonsWeek />
-      {open.length === 0 && <CallList />}
+      <CallList />
       <Actions><Btn title="סיימתי" icon="check" kind="line" onPress={() => actions.done(s.id)} /></Actions>
     </View>
   );
@@ -465,7 +465,7 @@ function CrmTasks() {
 
 export function CallList() {
   const { settings } = useDay();
-  return settings.calls?.url ? <RemoteCalls url={settings.calls.url} /> : <LocalCalls />;
+  return <RemoteCalls url={settings.calls?.url || PUBLIC_SHEET} />;
 }
 
 // רשימה מהגיליון

@@ -233,7 +233,7 @@ function Calls({ settings, save }) {
   return (
     <Section title="גיליון ההתרמה">
       <Card style={{ gap: SP.sm }}>
-        <T c="sub">כתובת הסקריפט מהגיליון (מסתיימת ב-/exec). הכתובת נשמרת רק בטלפון.</T>
+        <T c="sub">בלי כתובת — הרשימה נקראת ישר מגיליון ההתרמה (קריאה בלבד). אפשר להדביק כאן כתובת אחרת אם צריך.</T>
         <Field value={url} onChangeText={v => save({ calls: { ...settings.calls, url: v.trim() } })} placeholder="https://script.google.com/macros/s/…/exec" />
         <Btn title="בדיקת חיבור" kind="line" small onPress={test} />
         {!!msg && <T v="small">{msg}</T>}
