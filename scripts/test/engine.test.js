@@ -195,5 +195,17 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(toTime(find(q, 'kollel').plannedStart) === '10:30' && toTime(find(q, 'drive_kollel').plannedEnd) === '10:30', 'כולל ב-10:30 — גם הנסיעה זזה');
 }
 
+// כביסה לפי מתי שנעשתה בפועל: לא כובסה אתמול → מופיעה היום, ונשארת עד שעושים
+{
+  const S5 = { ...S, cadenceLast: { laundry: { last: '2026-10-14' } } };
+  const sun = new Date(2026, 9, 18, 6), mon = new Date(2026, 9, 19, 6);
+  let q = planDay({ settings: S5, date: sun, state: {}, zmanim: z, now: 300 });
+  ok(!!find(q, 'laundry') && find(q, 'laundry').steps.filter(x => x.id.startsWith('sh')).length === 3, 'לא כובס מאז 14 — היום כביסה (3 חולצות)');
+  const S6 = { ...S, cadenceLast: { laundry: { last: '2026-10-18', prev: '2026-10-14' } } };
+  ok(!find(planDay({ settings: S6, date: mon, state: {}, zmanim: z, now: 300 }), 'laundry'), 'כובס ראשון — לא בשני');
+  ok(!!find(planDay({ settings: S6, date: new Date(2026, 9, 21, 6), state: {}, zmanim: z, now: 300 }), 'laundry'), 'כובס ראשון — שוב ברביעי');
+  ok(!!find(planDay({ settings: S6, date: sun, state: {}, zmanim: z, now: 300 }), 'laundry'), 'ביום שכובס — עדיין מופיע (כבוצע)');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');

@@ -109,7 +109,7 @@ function PhoneLog() {
 export default function DayScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan: todayPlan, zmanim: todayZ, dayDate: today, hebrew, actions, settings, state: todayState } = useDay();
+  const { plan: todayPlan, zmanim: todayZ, dayDate: today, hebrew, actions, settings, eff, state: todayState } = useDay();
   // היום / מחר
   const [which, setWhich] = useState('today');
   const tDate = addDays(today, 1), tKey = dateKey(tDate);
@@ -123,7 +123,7 @@ export default function DayScreen({ go }) {
   const isToday = which === 'today';
   const dayDate = isToday ? today : tDate;
   const zmanim = isToday ? todayZ : tZ;
-  const plan = isToday ? todayPlan : planDay({ settings, date: tDate, state: tState, zmanim: tZ, now: 0 });
+  const plan = isToday ? todayPlan : planDay({ settings: eff || settings, date: tDate, state: tState, zmanim: tZ, now: 0 });
   const overrides = (isToday ? todayState.overrides : tState.overrides) || {};
   const setOverride = (id, patch) => {
     if (isToday) return actions.setOverride(id, patch);
