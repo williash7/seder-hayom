@@ -22,12 +22,20 @@ export default function AppsScreen() {
   const [mins, setMins] = useState(10);
   const [always, setAlways] = useState(false);
   const [isHome, setIsHome] = useState(true);
+  const [err, setErr] = useState(null);
 
   useEffect(() => {
     const load = async () => {
-      const l = await Native.listApps(true);
-      if (l.length) { cache = l; setApps(l); }
       setIsHome(Native.isDefaultHome());
+      // קודם רק שמות (מהר), ואז אייקונים ברקע
+      try {
+        const names = await Native.listApps(false);
+        if (!names?.length) { setErr(Native.hasNative ? 'לא נמצאו אפליקציות' : 'הגרסה המותקנת ישנה — צריך להתקין את בנייה 17'); return; }
+        setErr(null);
+        if (!cache) { setApps(names); }
+        const withIcons = await Native.listApps(true);
+        if (withIcons?.length) { cache = withIcons; setApps(withIcons); }
+      } catch (e) { setErr(String(e?.message || e)); }
     };
     load();
     const sub = AppState.addEventListener('change', s => s === 'active' && load());
@@ -70,7 +78,7 @@ export default function AppsScreen() {
       {list.map(a => (
         <Pressable key={a.pkg} onPress={() => tap(a)} style={({ pressed }) => ({ width: '25%', alignItems: 'center', paddingVertical: SP.md, opacity: pressed ? 0.5 : dim ? 0.55 : 1 })}>
           {a.icon ? <Image source={{ uri: 'data:image/png;base64,' + a.icon }} style={{ width: 52, height: 52 }} />
-            : <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: t.sunk }} />}
+            : <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: t.sunk, alignItems: 'center', justifyContent: 'center' }}><T v="bodyB" c="sub">{a.label.slice(0, 1)}</T></View>}
           <T v="tiny" numberOfLines={1} style={{ marginTop: 6, paddingHorizontal: 4, textAlign: 'center' }}>{a.label}</T>
         </Pressable>
       ))}
@@ -99,7 +107,8 @@ export default function AppsScreen() {
             <Grid list={rest} dim />
           </>
         )}
-        {!apps.length && <T c="sub" style={{ marginTop: SP.xl }}>טוען…</T>}
+        {!apps.length && !err && <T c="sub" style={{ marginTop: SP.xl }}>טוען…</T>}
+        {!!err && <T style={{ marginTop: SP.xl, color: t.warn }}>לא הצלחתי לטעון את האפליקציות: {err}</T>}
       </ScrollView>
 
       <Sheet visible={!!ask} onClose={() => setAsk(null)} title={ask ? `בשביל מה ${ask.label}?` : ''}>
