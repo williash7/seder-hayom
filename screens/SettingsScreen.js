@@ -16,7 +16,7 @@ import { STATION_TYPES } from '../lib/defaults';
 
 const PANES = [
   ['general', 'כללי'], ['places', 'מקומות'], ['minyanim', 'מניינים'], ['apps', 'אפליקציות'], ['calls', 'התרמה'],
-  ['lists', 'רשימות ונוסחים'], ['stations', 'תחנות'],
+  ['menu', 'כריכים'], ['lists', 'רשימות ונוסחים'], ['stations', 'תחנות'],
 ];
 
 export default function SettingsScreen() {
@@ -41,6 +41,7 @@ export default function SettingsScreen() {
         {pane === 'minyanim' && <Minyanim settings={settings} save={save} />}
         {pane === 'apps' && <Apps settings={settings} save={save} />}
         {pane === 'calls' && <Calls settings={settings} save={save} />}
+        {pane === 'menu' && <Menu settings={settings} save={save} />}
         {pane === 'lists' && <Lists settings={settings} save={save} />}
         {pane === 'stations' && <Stations settings={settings} save={save} />}
       </ScrollView>
@@ -246,6 +247,30 @@ function Calls({ settings, save }) {
         בלי גיליון מחובר, אפשר לנהל רשימת טלפונים קצרה בתוך האפליקציה (בתחנת המשימות).
       </T>
     </Section>
+  );
+}
+
+function Menu({ settings, save }) {
+  const m = settings.sandwichMenu || { kids: [], days: {} };
+  const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
+  const set = (d, kid, text) => save({ sandwichMenu: { ...m, days: { ...m.days,
+    [d]: { ...(m.days?.[d] || {}), [kid]: text.split(',').map(x => x.trim()).filter(Boolean) } } } });
+  return (
+    <>
+      <T v="small" c="sub" style={{ marginTop: SP.lg }}>כל כריך מופרד בפסיק. ריק = אין כריך באותו יום.</T>
+      {DAYS.map((name, d) => (
+        <Section key={d} title={`יום ${name}`}>
+          <Card style={{ gap: SP.sm }}>
+            {m.kids.map(kid => (
+              <View key={kid} style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
+                <T v="bodyB" style={{ width: 64 }}>{kid}</T>
+                <Field value={(m.days?.[d]?.[kid] || []).join(', ')} onChangeText={v => set(d, kid, v)} style={{ flex: 1 }} placeholder="—" />
+              </View>
+            ))}
+          </Card>
+        </Section>
+      ))}
+    </>
   );
 }
 

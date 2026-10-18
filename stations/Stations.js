@@ -12,6 +12,7 @@ import { fetchPeople, whoToCall, firstPhone, loadCallLog, logCall } from '../lib
 import * as Native from '../lib/native';
 import { fetchCrmTasks, crmDone, toggleCrmDone } from '../lib/crmTasks';
 import { weekLessons, loadPrep, savePrep } from '../lib/lessons';
+import { loadSupplies, saveSupplies, menuFor } from '../lib/supplies';
 import Icon from '../components/Icon';
 
 const fail = e => Alert.alert('לא הצלחתי', String(e?.message || e));
@@ -152,6 +153,51 @@ function Checklist({ s }) {
       )}
       <Actions>
         <Btn title="סיימתי" icon="check" kind="ok" onPress={() => actions.done(s.id, { missing })} />
+      </Actions>
+    </View>
+  );
+}
+
+// ───────────── מצרכים לכריכים (בערב למחר, או בבוקר להיום) ─────────────
+function Supplies({ s }) {
+  const { actions, settings, dayKey, tomorrowKey, dayDate } = useDay();
+  const t = useT();
+  const forTomorrow = s.target === 'tomorrow';
+  const target = forTomorrow ? tomorrowKey : dayKey;
+  const dow = forTomorrow ? (dayDate.getDay() + 1) % 7 : dayDate.getDay();
+  const [v, setV] = useState({ checked: {} });
+  const [draft, setDraft] = useState('');
+  useEffect(() => { loadSupplies(target).then(x => setV({ checked: {}, ...x })); }, [target]);
+  const items = settings.lists?.sandwiches || [];
+  const menu = menuFor(settings, dow);
+  const toggle = it => { const n = { ...v, checked: { ...v.checked, [it]: !v.checked[it] } }; setV(n); saveSupplies(target, n); };
+  const add = () => {
+    const x = draft.trim(); if (!x) return;
+    actions.saveSettings({ ...settings, lists: { ...settings.lists, sandwiches: [...items, x] } }); setDraft('');
+  };
+  const finish = () => {
+    const missing = items.filter(i => !v.checked[i]);
+    saveSupplies(target, { ...v, doneEve: forTomorrow ? true : v.doneEve, done: true });
+    if (missing.length) actions.addTask(`לקנות לכריכים: ${missing.join(', ')}`);
+    actions.done(s.id, { missing });
+  };
+  return (
+    <View>
+      {menu.length > 0 && (
+        <Card tone="sunk" style={{ marginBottom: SP.md }}>
+          <T v="tiny" c="sub">{forTomorrow ? 'הכריכים של מחר' : 'הכריכים של היום'}</T>
+          {menu.map(m => <T key={m.kid} v="small" style={{ marginTop: 4 }}><T v="small" style={{ fontWeight: '800' }}>{m.kid}:</T> {m.items.join(' · ')}</T>)}
+        </Card>
+      )}
+      <T v="small" c="sub">לסמן מה יש בבית:</T>
+      {items.map(it => <Check key={it} label={it} checked={!!v.checked[it]} onPress={() => toggle(it)} />)}
+      <View style={{ flexDirection: 'row', gap: SP.sm, marginTop: SP.sm }}>
+        <Field value={draft} onChangeText={setDraft} placeholder="להוסיף לרשימה" style={{ flex: 1 }} onSubmitEditing={add} />
+        <Btn title="+" small onPress={add} />
+      </View>
+      <Actions>
+        <Btn title="סיימתי" icon="check" kind="ok" onPress={finish} />
+        <T v="small" c="sub" style={{ textAlign: 'center' }}>מה שלא סומן נכנס למשימות: "לקנות לכריכים"</T>
       </Actions>
     </View>
   );
@@ -739,7 +785,7 @@ function Open({ s }) {
 const MAP = {
   wake: Wake, routine: Routine, text: TextSt, checklist: Checklist, timer: Timer, drive: Drive,
   minyan: Minyan, study: Study, prayer: Prayer, note: Note, camera: Camera, app: AppSt,
-  open: Open, counter: Counter, tasks: Tasks, home: Home, plan: Plan, close: Close, sleep: Sleep, shabbat: Shabbat,
+  open: Open, supplies: Supplies, counter: Counter, tasks: Tasks, home: Home, plan: Plan, close: Close, sleep: Sleep, shabbat: Shabbat,
 };
 
 export default function StationBody({ s, go }) {
