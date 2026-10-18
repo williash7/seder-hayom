@@ -221,8 +221,10 @@ function Timer({ s }) {
 function Drive({ s }) {
   const { actions, settings } = useDay();
   const t = useT();
-  const legs = s.legs || [];
+  const legs = s.rec?.data?.order || s.legs || [];
   const leg = s.rec?.data?.leg || 0;
+  // סדר האיסוף לבחירה (למשל: קודם הבנות או קודם צביה)
+  const first = id => actions.setData(s.id, { order: [id, ...legs.filter(x => x !== id)] });
   const [returned, setReturned] = useState(false);
   const opened = useRef(false);
 
@@ -243,6 +245,12 @@ function Drive({ s }) {
 
   return (
     <View>
+      {s.chooseOrder && leg === 0 && legs.length > 1 && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginBottom: SP.sm }}>
+          <T v="small" c="sub" style={{ alignSelf: 'center' }}>קודם:</T>
+          {legs.map(id => <Chip key={id} label={settings.places?.[id]?.name || id} active={legs[0] === id} onPress={() => first(id)} />)}
+        </View>
+      )}
       {legs.map((id, i) => {
         const p = settings.places?.[id] || { name: id };
         const state = i < leg ? 'done' : i === leg ? 'cur' : 'next';
