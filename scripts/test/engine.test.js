@@ -216,6 +216,12 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const q = planDay({ settings: S, date: d, state: st, zmanim: z, now: toMin('19:58') });
   ok(toTime(find(q, 'shiur_eve').plannedStart) === '20:30' && find(q, 'shiur_eve').late < 0.5 && find(q, 'drive_shiur').late < 0.5, 'השכבה ב-19:58 — עדיין בשיעור ב-20:30');
   ok(find(q, 'bedtime_kids').duration >= 10 && find(q, 'bedtime_kids').duration <= 25, 'ההשכבה התקצרה (' + Math.round(find(q, 'bedtime_kids').duration) + ' דק׳)');
+  // כבר התחילה ההשכבה ב-20:12 — עדיין נגמרת בזמן לצאת, והבא בתור: לשיעור
+  st.stations.bedtime_kids = { start: toMin('20:12') };
+  const q2 = planDay({ settings: S, date: d, state: st, zmanim: z, now: toMin('20:12') });
+  const nx = q2.list[q2.currentIndex + 1];
+  ok(toTime(find(q2, 'bedtime_kids').plannedEnd) === '20:20' && find(q2, 'shiur_eve').late < 0.5, 'השכבה שהתחילה 20:12 — עד 20:20');
+  ok(q2.list.slice(q2.currentIndex + 1).find(x => x.status === 'pending')?.id === 'drive_shiur', 'אחרי ההשכבה — לשיעור');
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }

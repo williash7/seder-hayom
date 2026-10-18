@@ -788,6 +788,12 @@ function Open({ s }) {
         <T v="clock">{fmtClock(elapsed)}</T>
         {s.nudgeEvery && <T v="small" c="sub">רטט שקט כל {s.nudgeEvery} דק׳ — "כולם ישנים?"</T>}
       </Card>
+      {s.squeezed && (
+        <Card tone="warn" style={{ marginTop: SP.sm, alignItems: 'center' }}>
+          <T v="bodyB">לסיים עד {toTime(s.plannedEnd)}</T>
+          <T v="small" c="sub">{s.squeezeFor ? `כדי להגיע ל${s.squeezeFor} בזמן` : 'כדי להגיע בזמן'}</T>
+        </Card>
+      )}
       {(s.items || []).map(it => <Check key={it} label={it} checked={!!marks[it]} onPress={() => toggle(it)} />)}
       <Actions><Btn title="כולם ישנים" icon="moon" kind="ok" onPress={() => actions.done(s.id)} /></Actions>
     </View>

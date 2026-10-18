@@ -94,7 +94,7 @@ export default function NowScreen({ go }) {
           ) : s.type === 'open' && startedAt != null ? (
             <>
               <T v="clock" style={{ marginTop: 6 }}>{fmtClock(sec - startedAt * 60)}</T>
-              <T v="small" c="sub">בדרך כלל כ-{fmtDur(s.duration)}</T>
+              <T v="small" c="sub">{s.squeezed ? `עד ${toTime(s.plannedEnd)}` : `בדרך כלל כ-${fmtDur(s.duration)}`}</T>
             </>
           ) : s.duration > 0 ? (
             <>
