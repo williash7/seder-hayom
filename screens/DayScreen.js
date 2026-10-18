@@ -68,6 +68,10 @@ export default function DayScreen({ go }) {
   const ins = useSafeAreaInsets();
   const { plan, zmanim, dayDate, hebrew, actions } = useDay();
   const [sel, setSel] = useState(null);
+  const [showPast, setShowPast] = useState(false);
+  const isPast = s => s.status === 'done' || s.status === 'skipped' || s.status === 'auto';
+  const pastCount = plan.list.filter(isPast).length;
+  const list = showPast ? plan.list : plan.list.filter(s => !isPast(s));
 
   const done = plan.list.filter(s => s.status === 'done').length;
   const Z = [['נץ', zmanim.sunrise], ['סוף ק״ש', zmanim.sofZmanShma], ['סוף תפילה', zmanim.sofZmanTfilla],
@@ -90,8 +94,12 @@ export default function DayScreen({ go }) {
           </View>
         )}
 
-        <View style={{ marginTop: SP.xl }}>
-          {plan.list.map((s, i) => {
+        {pastCount > 0 && (
+          <Btn title={showPast ? 'להסתיר את מה שעבר' : `להראות את מה שעבר (${pastCount})`} icon={showPast ? 'minus' : 'plus'}
+            kind="ghost" small style={{ marginTop: SP.lg, alignSelf: 'flex-start' }} onPress={() => setShowPast(!showPast)} />
+        )}
+        <View style={{ marginTop: SP.md }}>
+          {list.map((s, i) => {
             const cur = s.status === 'current';
             const off = s.status === 'done' || s.status === 'skipped' || s.status === 'auto';
             return (
@@ -108,7 +116,7 @@ export default function DayScreen({ go }) {
                     <Icon name={s.status === 'done' ? 'check' : s.status === 'skipped' ? 'skip' : s.icon} size={15}
                       color={cur ? '#fff' : s.status === 'done' ? t.ok : t.sub} />
                   </View>
-                  {i < plan.list.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: t.hair, marginVertical: 2 }} />}
+                  {i < list.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: t.hair, marginVertical: 2 }} />}
                 </View>
                 <View style={{ flex: 1, paddingBottom: SP.md }}>
                   <T v="bodyB" style={{ color: off ? t.faint : t.ink, textDecorationLine: s.status === 'skipped' ? 'line-through' : 'none' }}>
