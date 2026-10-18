@@ -21,8 +21,11 @@ internal object LockState {
   }
 
   private var homePkg: String? = null
+  private var homeAt = 0L
   private fun launcher(ctx: Context): String? {
-    if (homePkg == null) {
+    // מתעדכן כל דקה — כי "סדר היום" יכול להפוך למסך הבית
+    if (homePkg == null || System.currentTimeMillis() - homeAt > 60_000) {
+      homeAt = System.currentTimeMillis()
       homePkg = try {
         ctx.packageManager.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0)
           ?.activityInfo?.packageName

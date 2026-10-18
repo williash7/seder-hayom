@@ -1,6 +1,11 @@
 package expo.modules.sedernative
 
 import android.app.NotificationManager
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.util.Base64
+import java.io.ByteArrayOutputStream
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -71,6 +76,42 @@ class SederNativeModule : Module() {
     Function("openPackage") { pkg: String ->
       val i = ctx.packageManager.getLaunchIntentForPackage(pkg)
       if (i != null) { i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); ctx.startActivity(i); true } else false
+    }
+
+    // ── מסך הבית ──
+    Function("isDefaultHome") {
+      val r = ctx.packageManager.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY)
+      r?.activityInfo?.packageName == ctx.packageName
+    }
+    Function("openHomeSettings") {
+      try { ctx.startActivity(Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+      catch (_: Exception) { open(Settings.ACTION_SETTINGS, false) }
+    }
+    // כל האפליקציות שאפשר לפתוח: { pkg, label, icon (PNG base64) }
+    AsyncFunction("listApps") { withIcons: Boolean ->
+      val pm = ctx.packageManager
+      val list = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+      val seen = HashSet<String>()
+      list.mapNotNull { ri ->
+        val pkg = ri.activityInfo.packageName
+        if (pkg == ctx.packageName || !seen.add(pkg)) return@mapNotNull null
+        val m = HashMap<String, Any>()
+        m["pkg"] = pkg
+        m["label"] = ri.loadLabel(pm).toString()
+        if (withIcons) {
+          try {
+            val d = ri.loadIcon(pm)
+            val size = 96
+            val b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val c = Canvas(b)
+            d.setBounds(0, 0, size, size); d.draw(c)
+            val out = ByteArrayOutputStream()
+            b.compress(Bitmap.CompressFormat.PNG, 100, out)
+            m["icon"] = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+          } catch (_: Exception) {}
+        }
+        m
+      }.sortedBy { (it["label"] as String).lowercase() }
     }
 
     // ── יומן שימוש ──

@@ -114,6 +114,7 @@ function Permissions() {
       exact: Native.canExactAlarm(),
       lock: Native.isLockServiceOn(),
       geo: g.background,
+      home: Native.isDefaultHome(),
     });
   };
   useEffect(() => {
@@ -126,6 +127,7 @@ function Permissions() {
     ['full', 'שעון מעורר על מסך מלא', 'מצלצל מעל מסך הנעילה', () => Native.openFullScreenSettings()],
     ['exact', 'שעון מדויק', 'שההשכמה תצלצל בדקה המדויקת', () => Native.openExactAlarmSettings()],
     ['lock', 'נעילת זמן בית', 'בהגדרות הנגישות: "סדר היום — זמן בית" ← להפעיל', () => Native.openAccessibilitySettings()],
+    ['home', 'מסך הבית', 'לבחור "סדר היום" כאפליקציית הבית', () => Native.openHomeSettings()],
     ['geo', 'מיקום — "כל הזמן"', 'כדי שהנסיעות יתקדמו לבד כשמגיעים', async () => { await askGeoPermission(); refresh(); }],
   ];
   return (

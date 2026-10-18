@@ -11,6 +11,7 @@ on:
       - 'package-lock.json'
       - 'app.json'
       - 'modules/**'
+      - 'plugins/**'
       - 'assets/**'
       - 'scripts/sign-android.js'
   workflow_dispatch:

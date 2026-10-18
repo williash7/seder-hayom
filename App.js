@@ -1,5 +1,6 @@
 import { Component, useEffect, useState } from 'react';
-import { View, Text, Pressable, I18nManager, ScrollView, Share } from 'react-native';
+import { View, Text, Pressable, I18nManager, ScrollView, Share, BackHandler } from 'react-native';
+import * as Native from './lib/native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeCtx, useSystemTheme, useT, R } from './lib/theme';
@@ -10,6 +11,7 @@ import UpdateButton from './components/UpdateButton';
 import NowScreen from './screens/NowScreen';
 import DayScreen from './screens/DayScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import AppsScreen from './screens/AppsScreen';
 
 // עברית מימין לשמאל — נכנס לתוקף מהפתיחה השנייה
 try { I18nManager.allowRTL(true); I18nManager.forceRTL(true); } catch {}
@@ -17,6 +19,7 @@ try { I18nManager.allowRTL(true); I18nManager.forceRTL(true); } catch {}
 const TABS = [
   { k: 'now', icon: 'now', label: 'עכשיו' },
   { k: 'day', icon: 'day', label: 'היום' },
+  { k: 'apps', icon: 'grid', label: 'אפליקציות' },
   { k: 'settings', icon: 'settings', label: 'הגדרות' },
 ];
 
@@ -44,6 +47,11 @@ function TabBar({ tab, setTab }) {
 function Main() {
   const [tab, setTab] = useState('now');
   const t = useT();
+  // מסך הבית: "חזור" לא יוצא מהאפליקציה — חוזר ל"עכשיו"
+  useEffect(() => {
+    const h = BackHandler.addEventListener('hardwareBackPress', () => { setTab('now'); return true; });
+    return () => h.remove();
+  }, []);
   useEffect(() => {
     // אתחול התראות אחרי שהמסך עלה — לא בזמן import
     const h = setTimeout(async () => { await initNotifications(); await askPermission(); }, 600);
@@ -62,6 +70,7 @@ function Main() {
       {tab === 'now' && <NowScreen go={setTab} />}
       {tab === 'day' && <DayScreen go={setTab} />}
       {tab === 'settings' && <SettingsScreen go={setTab} />}
+      {tab === 'apps' && <AppsScreen />}
       <UpdateButton />
       <TabBar tab={tab} setTab={setTab} />
     </View>
@@ -80,6 +89,9 @@ class Boundary extends Component {
         <Text style={{ marginTop: 8 }}>אפשר לשלוח את השגיאה ל-Claude:</Text>
         <Pressable onPress={() => Share.share({ message: msg })} style={{ marginTop: 16, padding: 14, backgroundColor: '#14213D', borderRadius: 999 }}>
           <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '700' }}>שתף שגיאה</Text>
+        </Pressable>
+        <Pressable onPress={() => Native.openHomeSettings()} style={{ marginTop: 10, padding: 14, borderWidth: 1, borderColor: '#14213D', borderRadius: 999 }}>
+          <Text style={{ textAlign: 'center', fontWeight: '700' }}>חירום: לבחור מסך בית אחר</Text>
         </Pressable>
         <Pressable onPress={() => this.setState({ err: null })} style={{ marginTop: 10, padding: 14 }}>
           <Text style={{ textAlign: 'center' }}>נסה שוב</Text>

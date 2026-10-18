@@ -43,6 +43,7 @@
     },
     "plugins": [
       "expo-updates",
+      "./plugins/withHome.js",
       [
         "expo-notifications",
         {
@@ -69,7 +70,7 @@
       ]
     ],
     "extra": {
-      "releaseName": "0.5",
+      "releaseName": "0.6",
       "eas": {
         "projectId": "5f28778a-e203-4c61-91e7-bfcdfd204462"
       }
@@ -84,6 +85,6 @@
         "expo-channel-name": "preview"
       }
     },
-    "runtimeVersion": "d1d28a17ef53e926ce0d20bd96fe04c63f5264d3"
+    "runtimeVersion": "r2"
   }
 }
