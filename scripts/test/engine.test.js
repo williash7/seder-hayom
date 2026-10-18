@@ -180,5 +180,16 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(!so.some(o => o.time === '09:30'), 'ראשון — אין 9:30');
 }
 
+// שינוי ליום אחד — הכולל עד 10:45; ביטול תחנה; הזזת שעה גוררת את הנסיעה
+{
+  const d = new Date(2026, 9, 19, 6);
+  let q = planDay({ settings: S, date: d, state: { overrides: { kollel: { minutes: 45 } } }, zmanim: z, now: 300 });
+  ok(toTime(find(q, 'kollel').plannedEnd) === '10:45', 'מחר — הכולל עד 10:45');
+  q = planDay({ settings: S, date: d, state: { overrides: { mikveh: { off: true } } }, zmanim: z, now: 300 });
+  ok(!find(q, 'mikveh'), 'ביטול תחנה ליום אחד');
+  q = planDay({ settings: S, date: d, state: { overrides: { kollel: { at: '10:30' } } }, zmanim: z, now: 300 });
+  ok(toTime(find(q, 'kollel').plannedStart) === '10:30' && toTime(find(q, 'drive_kollel').plannedEnd) === '10:30', 'כולל ב-10:30 — גם הנסיעה זזה');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');

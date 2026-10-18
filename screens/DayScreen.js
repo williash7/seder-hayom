@@ -4,7 +4,7 @@ import { View, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
-import { T, Btn, Card, Sheet, Chip } from '../components/UI';
+import { T, Btn, Card, Sheet, Chip, Field } from '../components/UI';
 import Icon from '../components/Icon';
 import { toTime, fmtDur, DAY_NAMES } from '../lib/time';
 import { STATION_TYPES } from '../lib/defaults';
@@ -13,6 +13,42 @@ import { AppState } from 'react-native';
 import * as S from '../lib/store';
 import * as Native from '../lib/native';
 import { dateKey, addDays } from '../lib/time';
+import { planDay } from '../lib/engine';
+import { getZmanim } from '../lib/zmanim';
+
+const HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/;
+
+/** עריכת תחנה ליום אחד: שעה, משך, ביטול */
+function OverrideEditor({ s, ov, onSave }) {
+  const [at, setAt] = useState(ov?.at || s.at || '');
+  const [arr, setArr] = useState(ov?.arriveBy || s.arriveBy || '');
+  const [min, setMin] = useState(String(ov?.minutes ?? s.minutes ?? ''));
+  const hasMin = !['routine', 'drive', 'prayer'].includes(s.type) && !s.fill;
+  if (!s.at && !s.arriveBy && !hasMin) return (
+    <Btn title="לבטל ביום הזה" icon="x" kind="ghost" onPress={() => onSave({ off: true })} />
+  );
+  const save = () => {
+    const p = {};
+    if (s.at && at !== s.at) { if (!HHMM.test(at)) return; p.at = at.padStart(5, '0'); }
+    if (s.arriveBy && arr !== s.arriveBy) { if (!HHMM.test(arr)) return; p.arriveBy = arr.padStart(5, '0'); }
+    if (hasMin && min !== String(s.minutes ?? '')) p.minutes = Number(min) || 0;
+    onSave(Object.keys(p).length ? p : null);
+  };
+  return (
+    <View style={{ gap: SP.sm, marginTop: SP.sm }}>
+      <T v="tiny" c="sub">לשנות ליום הזה בלבד</T>
+      {!!s.at && <Field value={at} onChangeText={setAt} placeholder="שעה (למשל 10:00)" keyboardType="numbers-and-punctuation" />}
+      {!!s.arriveBy && <Field value={arr} onChangeText={setArr} placeholder="להגיע עד (למשל 10:00)" keyboardType="numbers-and-punctuation" />}
+      {hasMin && <Field value={min} onChangeText={setMin} placeholder="כמה דקות" keyboardType="number-pad" />}
+      {hasMin && !!s.at && HHMM.test(at) && Number(min) > 0 && (
+        <T v="small" c="sub">עד {toTime(Number(at.split(':')[0]) * 60 + Number(at.split(':')[1]) + Number(min))}</T>
+      )}
+      <Btn title="לשמור ליום הזה" icon="check" kind="gold" onPress={save} />
+      {!!ov && <Btn title="להחזיר לרגיל" icon="undo" kind="line" onPress={() => onSave(null)} />}
+      <Btn title="לבטל ביום הזה" icon="x" kind="ghost" onPress={() => onSave({ off: true })} />
+    </View>
+  );
+}
 
 /** יומן הטלפון: בשביל מה פתחתי, וכמה זמן בכל אפליקציה — לפי יום */
 function PhoneLog() {
@@ -66,7 +102,30 @@ function PhoneLog() {
 export default function DayScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan, zmanim, dayDate, hebrew, actions } = useDay();
+  const { plan: todayPlan, zmanim: todayZ, dayDate: today, hebrew, actions, settings, state: todayState } = useDay();
+  // היום / מחר
+  const [which, setWhich] = useState('today');
+  const tDate = addDays(today, 1), tKey = dateKey(tDate);
+  const [tState, setTState] = useState({ stations: {}, choices: {} });
+  const [tZ, setTZ] = useState({});
+  useEffect(() => {
+    if (which !== 'tomorrow') return;
+    S.loadDay(tKey).then(setTState);
+    getZmanim(tDate).then(z => z && setTZ(z)).catch(() => {});
+  }, [which, tKey]);
+  const isToday = which === 'today';
+  const dayDate = isToday ? today : tDate;
+  const zmanim = isToday ? todayZ : tZ;
+  const plan = isToday ? todayPlan : planDay({ settings, date: tDate, state: tState, zmanim: tZ, now: 0 });
+  const overrides = (isToday ? todayState.overrides : tState.overrides) || {};
+  const setOverride = (id, patch) => {
+    if (isToday) return actions.setOverride(id, patch);
+    const ov = { ...(tState.overrides || {}) };
+    if (patch == null) delete ov[id]; else ov[id] = { ...(ov[id] || {}), ...patch };
+    const next = { ...tState, overrides: ov };
+    setTState(next); S.saveDay(tKey, next);
+  };
+  const offList = (settings.stations || []).filter(x => overrides[x.id]?.off);
   const [sel, setSel] = useState(null);
   const [showPast, setShowPast] = useState(false);
   const isPast = s => s.status === 'done' || s.status === 'skipped' || s.status === 'auto';
@@ -80,8 +139,12 @@ export default function DayScreen({ go }) {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <ScrollView contentContainerStyle={{ padding: SP.xl, paddingTop: ins.top + SP.lg, paddingBottom: 120 }}>
-        <T v="tiny" c="sub">{hebrew || ''}</T>
-        <T v="title">יום {DAY_NAMES[dayDate.getDay()]}</T>
+        <View style={{ flexDirection: 'row', gap: 6, marginBottom: SP.sm }}>
+          <Chip label="היום" active={isToday} onPress={() => setWhich('today')} />
+          <Chip label="מחר" active={!isToday} onPress={() => setWhich('tomorrow')} />
+        </View>
+        {isToday && <T v="tiny" c="sub">{hebrew || ''}</T>}
+        <T v="title">{isToday ? '' : 'מחר — '}יום {DAY_NAMES[dayDate.getDay()]}</T>
         <T c="sub" style={{ marginTop: 2 }}>{done} מתוך {plan.list.length} תחנות</T>
 
         {Z.length > 0 && (
@@ -125,7 +188,8 @@ export default function DayScreen({ go }) {
                   <View style={{ flexDirection: 'row', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
                     {s.duration > 0 && <T v="small" c="sub">{fmtDur(s.duration)}</T>}
                     {s.anchor?.hard && !off && <T v="small" style={{ color: t.gold }}>· קבוע {toTime(s.anchor.endAt ?? s.anchor.start)}</T>}
-                    {s.late > 1 && !off && <T v="small" style={{ color: t.warn }}>· איחור {Math.round(s.late)} דק׳</T>}
+                    {s.late > 1 && !off && isToday && <T v="small" style={{ color: t.warn }}>· איחור {Math.round(s.late)} דק׳</T>}
+                    {s.overridden && <T v="small" style={{ color: t.gold }}>· שונה ליום הזה</T>}
                   </View>
                 </View>
               </Pressable>
@@ -133,8 +197,13 @@ export default function DayScreen({ go }) {
           })}
         </View>
 
+        {offList.map(x => (
+          <Pressable key={x.id} onPress={() => setOverride(x.id, null)}>
+            <T v="small" c="sub" style={{ marginTop: SP.sm }}>בוטל ליום הזה: {x.title} · <T v="small" style={{ color: t.gold }}>להחזיר</T></T>
+          </Pressable>
+        ))}
         {plan.empty && <Card tone="sunk"><T c="sub">אין תחנות ליום הזה.</T></Card>}
-        <PhoneLog />
+        {isToday && <PhoneLog />}
         <Btn title="לאפס את היום" kind="ghost" small style={{ marginTop: SP.xl }} onPress={() => actions.resetToday()} />
       </ScrollView>
 
@@ -142,18 +211,22 @@ export default function DayScreen({ go }) {
         {sel && (
           <View style={{ gap: SP.sm }}>
             <T c="sub">{STATION_TYPES[sel.type]} · {toTime(sel.plannedStart)}–{toTime(sel.plannedEnd)}</T>
-            {sel.status !== 'current' && sel.status !== 'done' && (
+            {isToday && sel.status !== 'current' && sel.status !== 'done' && (
               <Btn title="לעבור לתחנה הזו עכשיו" icon="fwd" kind="gold"
                 onPress={() => { actions.jumpTo(sel.id); setSel(null); go('now'); }} />
             )}
-            {(sel.status === 'done' || sel.status === 'skipped') && (
+            {isToday && (sel.status === 'done' || sel.status === 'skipped') && (
               <Btn title="לבטל את הסימון" icon="undo" kind="line" onPress={() => { actions.undo(sel.id); setSel(null); }} />
             )}
-            {sel.status === 'current' && (
+            {isToday && sel.status === 'current' && (
               <Btn title="לסמן כבוצע" icon="check" kind="ok" onPress={() => { actions.done(sel.id); setSel(null); }} />
             )}
-            {sel.status !== 'done' && sel.status !== 'skipped' && (
+            {isToday && sel.status !== 'done' && sel.status !== 'skipped' && (
               <Btn title="לדלג" icon="skip" kind="ghost" onPress={() => { actions.skip(sel.id); setSel(null); }} />
+            )}
+            {sel.status !== 'done' && (
+              <OverrideEditor key={sel.id + which} s={(settings.stations || []).find(x => x.id === sel.id) || sel}
+                ov={overrides[sel.id]} onSave={p => { setOverride(sel.id, p); setSel(null); }} />
             )}
           </View>
         )}
