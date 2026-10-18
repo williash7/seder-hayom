@@ -155,9 +155,9 @@ export default function DayScreen({ go }) {
         <T c="sub" style={{ marginTop: 2 }}>{done} מתוך {plan.list.length} תחנות</T>
 
         {Z.length > 0 && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginTop: SP.lg }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: SP.lg, backgroundColor: t.surface, borderRadius: R.md, borderWidth: 1, borderColor: t.hair, paddingVertical: 6 }}>
             {Z.map(([k, v]) => (
-              <View key={k} style={{ backgroundColor: t.surface, borderRadius: R.md, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: t.hair }}>
+              <View key={k} style={{ width: '33.33%', alignItems: 'center', paddingVertical: 6 }}>
                 <T v="tiny" c="sub">{k}</T><T v="bodyB">{v}</T>
               </View>
             ))}
