@@ -285,8 +285,8 @@ function Minyan({ s }) {
         const isRec = recommended?.time === o.time;
         const lateAfter = o.after && o.after.late > 1;
         return (
-          <Pressable key={o.time} disabled={!o.reachable} onPress={() => pick(o.time)}>
-            <Card tone={isRec ? 'gold' : undefined} style={{ opacity: o.reachable ? 1 : 0.4, flexDirection: 'row', alignItems: 'center', gap: SP.lg }}>
+          <Pressable key={o.time} disabled={!o.reachable || lateAfter} onPress={() => pick(o.time)}>
+            <Card tone={isRec ? 'gold' : undefined} style={{ opacity: o.reachable && !lateAfter ? 1 : 0.4, flexDirection: 'row', alignItems: 'center', gap: SP.lg }}>
               <T v="clock" style={{ fontSize: 34 }}>{o.time}</T>
               <View style={{ flex: 1 }}>
                 {!o.reachable ? <T c="sub">כבר לא מספיקים</T> : (
@@ -294,7 +294,7 @@ function Minyan({ s }) {
                     <T v="bodyB">{o.studyMinutes > 0 ? `${fmtDur(o.studyMinutes)} ללימוד לפני` : 'מתחילים מיד'}</T>
                     {o.after && (
                       <T v="small" style={{ color: lateAfter ? t.bad : t.ok }}>
-                        {lateAfter ? `איחור של ${Math.round(o.after.late)} דק׳ ל${o.after.title}` : `מספיקים ל${o.after.title} (${toTime(o.after.time)})`}
+                        {lateAfter ? `לא מספיקים ל${o.after.title} (${toTime(o.after.time)})` : `מספיקים ל${o.after.title} (${toTime(o.after.time)})`}
                       </T>
                     )}
                     {o.warn.map(w => <T key={w} v="small" style={{ color: t.warn }}>{w}</T>)}
@@ -307,8 +307,9 @@ function Minyan({ s }) {
         );
       })}
       {!opts.length && <T c="sub">לא הוגדרו מניינים — הגדרות ← מניינים</T>}
-      {opts.length > 0 && !opts.some(o => o.reachable) && (
-        <Btn title="כל המניינים עברו — להתפלל ביחידות" icon="check" kind="gold" style={{ marginTop: SP.md }}
+      {opts.length > 0 && !opts.some(o => o.ok) && (
+        <Btn title={opts.some(o => o.reachable) ? 'אין מניין שמספיק לכולל — ביחידות אחרי הכולל' : 'כל המניינים עברו — להתפלל ביחידות'}
+          icon="check" kind="gold" style={{ marginTop: SP.md }}
           onPress={() => actions.done(s.id, { picked: 'alone' })} />
       )}
     </View>

@@ -31,7 +31,7 @@ for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive
 const opts = evaluateMinyan({ settings: S, date: sun, state: st, zmanim: z, now: m, prayer: 'shacharit' });
 ok(!opts.find(o => o.time === '08:00').reachable, 'מניין 08:00 כבר עבר');
 ok(opts.find(o => o.time === '08:30').ok, 'מניין 08:30 — מספיקים לכולל');
-ok(opts.find(o => o.time === '09:30').after.late > 1, 'מניין 09:30 — איחור לכולל');
+ok(!opts.some(o => o.time === '09:30'), 'ראשון — אין מניין 09:30');
 p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '08:30' } }, zmanim: z, now: m });
 ok(Math.round(find(p, 'study_am').duration) === 27, 'הלימוד לפני התפילה ממלא את הזמן עד 08:30');
 
@@ -67,9 +67,9 @@ ok(!sopts.some(o => o.time === '10:00'), 'ראשון — אין מניין 10:00
 
 // אחרי שחרית: אם נשאר זמן — לימוד; אם לא — מדלגים בשקט
 p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '08:30' } }, zmanim: z, now: m });
-ok(Math.round(find(p, 'study_post').duration) === 20, 'ראשון אחרי מניין 08:30 — 20 דק׳ לימוד עד היציאה לכולל');
-p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '09:00' } }, zmanim: z, now: m });
-ok(find(p, 'study_post').status === 'auto', 'ראשון אחרי מניין 09:00 — אין זמן, מדלגים בשקט');
+ok(Math.round(find(p, 'study_post').duration) === 35, 'ראשון אחרי מניין 08:30 — 35 דק׳ לימוד עד היציאה לכולל');
+p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '09:15' } }, zmanim: z, now: m });
+ok(find(p, 'study_post').status === 'auto', 'ראשון אחרי מניין 09:15 — אין זמן, מדלגים בשקט');
 p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '07:30' } }, zmanim: z, now: toMin('07:20') });
 ok(find(p, 'study_post').duration >= 5, 'ראשון אחרי מניין מוקדם — יש לימוד אחרי שחרית');
 p = planDay({ settings: S, date: fri, state: {}, zmanim: z, now: toMin('05:00') });
@@ -135,6 +135,32 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(ids.indexOf('supplies_eve') === ids.indexOf('drive_home2') + 1, 'מצרכים למחר — מיד כשחוזרים הביתה');
   const S4 = { ...S2, stations: S2.stations.map(x => x.id === 'shopping' ? { ...x, enabled: false } : x) };
   ok(!find(planDay({ settings: S4, date: new Date(2026, 9, 18, 6), state: {}, zmanim: z, now: 300 }), 'shopping'), 'סומן בערב — לא מופיע בבוקר');
+}
+
+// הכולל ב-10:00 — עוגן מוגן
+{
+  const day = new Date(2026, 9, 18, 6);
+  const mk = upto => { const st = { stations: {} }; let m = toMin('06:30'); for (const id of upto) { st.stations[id] = { status: 'done', start: m, end: m + 1 }; m += 1; } return st; };
+  const before = ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids'];
+  // מגיעים לבית הכנסת ב-9:01 (כמו היום): מניין 9:15, ההכנה מתבטלת, בכולל ב-10:00
+  let st = mk([...before, 'drive_mikveh', 'mikveh', 'drive_shul']);
+  let q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('09:01') });
+  ok(toTime(find(q, 'shacharit').plannedStart) === '09:15', 'מגיעים 9:01 — מניין 9:15');
+  ok(find(q, 'kollel').late < 0.5 && find(q, 'drive_kollel').late < 0.5, 'מגיעים 9:01 — בכולל ב-10:00 בלי איחור');
+  // מגיעים ב-9:20 — אין מניין שמספיק: שחרית ביחידות אחרי הכולל
+  q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('09:20') });
+  const sh = q.list.find(x => x.id === 'shacharit');
+  ok(sh.alone && q.list.indexOf(sh) > q.list.indexOf(find(q, 'kollel')), 'מגיעים 9:20 — שחרית ביחידות אחרי הכולל');
+  ok(find(q, 'kollel').late < 0.5, 'מגיעים 9:20 — הכולל עדיין ב-10:00');
+  // עדיין בבית ב-9:35 (לפני מקווה) — מוותרים על המקווה
+  st = mk(before);
+  q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('09:35') });
+  ok(find(q, 'mikveh').status === 'auto' && find(q, 'kollel').late < 0.5, 'יוצאים ב-9:35 — מוותרים על המקווה, בכולל ב-10:00');
+  // שישי — אין כולל, 9:30 מותר
+  const fo = evaluateMinyan({ settings: S2, date: new Date(2026, 9, 23, 6), state: {}, zmanim: z, now: toMin('09:10'), prayer: 'shacharit' });
+  ok(fo.some(o => o.time === '09:30'), 'שישי — יש מניין 9:30');
+  const so = evaluateMinyan({ settings: S2, date: day, state: {}, zmanim: z, now: 300, prayer: 'shacharit' });
+  ok(!so.some(o => o.time === '09:30'), 'ראשון — אין 9:30');
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
