@@ -128,7 +128,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 {
   const q = planDay({ settings: S2, date: new Date(2026, 9, 18, 6), state: {}, zmanim: z, now: 300 });
   const sw = find(q, 'sandwiches');
-  ok(sw.steps.length === 7 && sw.steps[0].label === 'מענדלה — חביתה גבינה' && sw.steps.at(-1).id === 'veg', 'ראשון — 6 כריכים + ירקות');
+  ok(sw.steps.length === 5 && sw.steps[0].label === 'מענדלה — חביתה גבינה' && sw.steps.at(-1).id === 'veg', 'ראשון — 4 כריכים + ירקות');
   const q2 = planDay({ settings: S2, date: new Date(2026, 9, 20, 6), state: {}, zmanim: z, now: 300 });
   ok(find(q2, 'sandwiches').steps.filter(x => x.label.startsWith('מענדלה')).length === 1, 'שלישי — למענדלה כריך אחד');
   const ids = q.list.map(x => x.id);

@@ -261,6 +261,11 @@ function Menu({ settings, save }) {
       {DAYS.map((name, d) => (
         <Section key={d} title={`יום ${name}`}>
           <Card style={{ gap: SP.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
+              <T v="bodyB" style={{ width: 64 }}>מצרכים</T>
+              <Field value={(settings.suppliesByDay?.[d] || []).join(', ')} style={{ flex: 1 }} placeholder="—"
+                onChangeText={v => save({ suppliesByDay: { ...(settings.suppliesByDay || {}), [d]: v.split(',').map(x => x.trim()).filter(Boolean) } })} />
+            </View>
             {m.kids.map(kid => (
               <View key={kid} style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
                 <T v="bodyB" style={{ width: 64 }}>{kid}</T>

@@ -168,12 +168,14 @@ function Supplies({ s }) {
   const [v, setV] = useState({ checked: {} });
   const [draft, setDraft] = useState('');
   useEffect(() => { loadSupplies(target).then(x => setV({ checked: {}, ...x })); }, [target]);
-  const items = settings.lists?.sandwiches || [];
+  const dayItems = settings.suppliesByDay?.[dow] || [];
+  const extra = settings.suppliesExtra || [];
+  const items = [...new Set([...dayItems, ...extra])];
   const menu = menuFor(settings, dow);
   const toggle = it => { const n = { ...v, checked: { ...v.checked, [it]: !v.checked[it] } }; setV(n); saveSupplies(target, n); };
   const add = () => {
     const x = draft.trim(); if (!x) return;
-    actions.saveSettings({ ...settings, lists: { ...settings.lists, sandwiches: [...items, x] } }); setDraft('');
+    actions.saveSettings({ ...settings, suppliesExtra: [...extra, x] }); setDraft('');
   };
   const finish = () => {
     const missing = items.filter(i => !v.checked[i]);
