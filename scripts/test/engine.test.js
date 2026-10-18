@@ -156,6 +156,23 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   st = mk(before);
   q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('09:35') });
   ok(find(q, 'mikveh').status === 'auto' && find(q, 'kollel').late < 0.5, 'יוצאים ב-9:35 — מוותרים על המקווה, בכולל ב-10:00');
+  // אחרי הכולל (11:34) — מה שלפני הכולל ולא סומן כבר עבר, לא חוזרים אליו
+  st = mk([...before, 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit']);
+  st.stations.shacharit = { status: 'done', start: toMin('09:15'), end: toMin('09:48') };
+  st.stations.drive_kollel = { status: 'done', start: toMin('09:50'), end: toMin('09:58') };
+  st.stations.kollel = { status: 'done', start: toMin('10:00'), end: toMin('11:33') };
+  q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('11:34') });
+  ok(q.current?.id === 'edit_kollel', 'אחרי הכולל — ממשיכים לעריכה, לא ללימוד/הכנה שלפני הכולל');
+  ok(find(q, 'shiur_prep').status === 'auto' && find(q, 'study_post').status === 'auto', 'אחרי הכולל — ההכנה והלימוד של הבוקר עברו');
+  // אחרי הכולל, ושחרית עוד לא — שחרית ביחידות עכשיו
+  delete st.stations.shacharit;
+  q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('11:34') });
+  ok(q.current?.id === 'shacharit' && q.current.alone, 'אחרי הכולל בלי שחרית — שחרית ביחידות עכשיו');
+  // התפללו ביחידות אחרי הכולל — מוצג אחרי הכולל, והלאה לעריכה
+  st.stations.shacharit = { status: 'done', start: toMin('11:35'), end: toMin('12:05') };
+  q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('12:06') });
+  ok(q.current?.id === 'edit_kollel' && q.list.indexOf(find(q, 'shacharit')) > q.list.indexOf(find(q, 'kollel')), 'שחרית אחרי הכולל — במקומה, ואז עריכה');
+  for (let i = 1; i < q.list.length; i++) if (q.list[i].plannedStart + 0.01 < q.list[i - 1].plannedEnd) ok(false, 'אחרי הכולל — חפיפה: ' + q.list[i].title);
   // שישי — אין כולל, 9:30 מותר
   const fo = evaluateMinyan({ settings: S2, date: new Date(2026, 9, 23, 6), state: {}, zmanim: z, now: toMin('09:10'), prayer: 'shacharit' });
   ok(fo.some(o => o.time === '09:30'), 'שישי — יש מניין 9:30');
