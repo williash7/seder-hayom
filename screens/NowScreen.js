@@ -148,6 +148,12 @@ function BlockedSheet() {
       <Btn title={`לפתוח ל-${mins} דק׳`} icon="lock" kind="gold" style={{ marginTop: SP.lg }}
         disabled={!reason.trim()} onPress={() => { const p = blocked; actions.unlockApp(p, label, reason.trim(), mins, mode); setReason(''); setTimeout(() => Native.openPackage(p), 300); }} />
       <Btn title="לא צריך — חוזר לבית" kind="ghost" style={{ marginTop: SP.sm }} onPress={() => actions.dismissBlocked()} />
+      <Btn title="זה חלון של המערכת — להשאיר תמיד פתוח" icon="check" kind="line" small style={{ marginTop: SP.md }} onPress={() => {
+        const p = blocked, l = settings.launcher || {};
+        actions.saveSettings({ ...settings, launcher: { ...l, always: [...new Set([...(l.always || []), p])] } });
+        actions.unlockApp(p, label, 'חלון מערכת — תמיד פתוח', 1, mode);
+        setTimeout(() => Native.openPackage(p), 300);
+      }} />
     </Sheet>
   );
 }
