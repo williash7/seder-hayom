@@ -8,7 +8,7 @@ import { openWaze, openApp, openAppAt, openVideoCamera, dial, shareText } from '
 import { toTime, fmtDur, fmtClock, toMin, dateKey, addDays } from '../lib/time';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider, Sheet } from '../components/UI';
-import { fetchPeople, whoToCall, firstPhone, loadCallLog, logCall, PUBLIC_SHEET } from '../lib/callsApi';
+import { fetchPeople, whoToCall, firstPhone, loadCallLog, logCall, toggleLater, PUBLIC_SHEET } from '../lib/callsApi';
 import * as Native from '../lib/native';
 import { fetchCrmTasks, crmDone, toggleCrmDone } from '../lib/crmTasks';
 import { weekLessons, loadPrep, savePrep } from '../lib/lessons';
@@ -522,6 +522,7 @@ function RemoteCalls({ url }) {
                 {[p.myStatus || p.status, (p.forecast || p.potential) && `צפי ${p.forecast || p.potential}`, hist.length && `שנים קודמות: ${hist.join(' · ')}`, p.note, p.lastCall && `התקשרתי ${p.lastCall}`, p.myNotes?.slice(-1)[0]].filter(Boolean).join(' · ')}
               </T>
             </View>
+            <Chip label={p.later ? 'להחזיר' : 'לסוף'} onPress={async () => setLog(await toggleLater(p))} />
             <IconBtn name="phone" tone="sunk" onPress={() => call(p)} />
           </View>
         );
