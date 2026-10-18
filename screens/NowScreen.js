@@ -7,6 +7,7 @@ import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Ring, Chip, Sheet, Field } from '../components/UI';
 import { useState } from 'react';
 import { appLabel } from '../lib/native';
+import * as Native from '../lib/native';
 import Icon from '../components/Icon';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
@@ -131,20 +132,21 @@ export default function NowScreen({ go }) {
 }
 
 function BlockedSheet() {
-  const { blocked, actions, settings } = useDay();
+  const { blocked, actions, settings, night, plan } = useDay();
   const [reason, setReason] = useState('');
+  const mode = night ? 'לילה' : plan.current?.type === 'home' ? 'זמן בית' : 'שעות העבודה';
   const [mins, setMins] = useState(settings.homeTime?.defaultUnlockMin || 10);
   if (!blocked) return null;
   const label = appLabel(blocked) || blocked;
   return (
-    <Sheet visible onClose={() => actions.dismissBlocked()} title="זמן בית">
+    <Sheet visible onClose={() => actions.dismissBlocked()} title={mode}>
       <T v="h2">בשביל מה צריך את {label}?</T>
       <Field value={reason} onChangeText={setReason} placeholder="למשל: לענות להודעה של ההורים בגן" style={{ marginTop: SP.md }} autoFocus />
       <View style={{ flexDirection: 'row', gap: SP.sm, marginTop: SP.md }}>
         {[5, 10, 20, 30].map(m => <Chip key={m} label={`${m} דק׳`} active={mins === m} onPress={() => setMins(m)} />)}
       </View>
       <Btn title={`לפתוח ל-${mins} דק׳`} icon="lock" kind="gold" style={{ marginTop: SP.lg }}
-        disabled={!reason.trim()} onPress={() => { actions.unlockApp(blocked, label, reason.trim(), mins); setReason(''); }} />
+        disabled={!reason.trim()} onPress={() => { const p = blocked; actions.unlockApp(p, label, reason.trim(), mins, mode); setReason(''); setTimeout(() => Native.openPackage(p), 300); }} />
       <Btn title="לא צריך — חוזר לבית" kind="ghost" style={{ marginTop: SP.sm }} onPress={() => actions.dismissBlocked()} />
     </Sheet>
   );

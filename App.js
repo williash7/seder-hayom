@@ -4,7 +4,7 @@ import * as Native from './lib/native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeCtx, useSystemTheme, useT, R } from './lib/theme';
-import { DayProvider } from './lib/DayContext';
+import { DayProvider, useDay } from './lib/DayContext';
 import { initNotifications, askPermission } from './lib/notify';
 import Icon from './components/Icon';
 import UpdateButton from './components/UpdateButton';
@@ -46,6 +46,9 @@ function TabBar({ tab, setTab }) {
 
 function Main() {
   const [tab, setTab] = useState('now');
+  const { blocked } = useDay();
+  // אפליקציה נחסמה — עוברים ל"עכשיו", שם שואלים בשביל מה
+  useEffect(() => { if (blocked) setTab('now'); }, [blocked]);
   const t = useT();
   // מסך הבית: "חזור" לא יוצא מהאפליקציה — חוזר ל"עכשיו"
   useEffect(() => {
