@@ -207,5 +207,16 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(!!find(planDay({ settings: S6, date: sun, state: {}, zmanim: z, now: 300 }), 'laundry'), 'ביום שכובס — עדיין מופיע (כבוצע)');
 }
 
+// שיעור ערב 20:30 (ראשון) — עוגן קבוע: ההשכבה מתקצרת כדי לצאת בזמן
+{
+  const d = new Date(2026, 9, 18, 6);
+  const st = { stations: {} };
+  const q0 = planDay({ settings: S, date: d, state: {}, zmanim: z, now: 300 });
+  for (const x of q0.list) { if (x.id === 'bedtime_kids') break; st.stations[x.id] = { status: 'done', start: 300, end: 300 }; }
+  const q = planDay({ settings: S, date: d, state: st, zmanim: z, now: toMin('19:58') });
+  ok(toTime(find(q, 'shiur_eve').plannedStart) === '20:30' && find(q, 'shiur_eve').late < 0.5 && find(q, 'drive_shiur').late < 0.5, 'השכבה ב-19:58 — עדיין בשיעור ב-20:30');
+  ok(find(q, 'bedtime_kids').duration >= 10 && find(q, 'bedtime_kids').duration <= 25, 'ההשכבה התקצרה (' + Math.round(find(q, 'bedtime_kids').duration) + ' דק׳)');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
