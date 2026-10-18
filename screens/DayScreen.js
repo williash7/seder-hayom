@@ -19,10 +19,10 @@ import { getZmanim } from '../lib/zmanim';
 const HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
 /** עריכת תחנה ליום אחד: שעה, משך, ביטול */
-function OverrideEditor({ s, ov, onSave }) {
-  const [at, setAt] = useState(ov?.at || s.at || '');
-  const [arr, setArr] = useState(ov?.arriveBy || s.arriveBy || '');
-  const [min, setMin] = useState(String(ov?.minutes ?? s.minutes ?? ''));
+function OverrideEditor({ s, ov, onSave, dow, onSaveWeekly }) {
+  const [at, setAt] = useState(ov?.at || s.atByDay?.[dow] || s.at || '');
+  const [arr, setArr] = useState(ov?.arriveBy || s.arriveByDay?.[dow] || s.arriveBy || '');
+  const [min, setMin] = useState(String(ov?.minutes ?? s.minutesByDay?.[dow] ?? s.minutes ?? ''));
   const hasMin = !['routine', 'drive', 'prayer'].includes(s.type) && !s.fill;
   if (!s.at && !s.arriveBy && !hasMin) return (
     <Btn title="לבטל ביום הזה" icon="x" kind="ghost" onPress={() => onSave({ off: true })} />
@@ -44,6 +44,13 @@ function OverrideEditor({ s, ov, onSave }) {
         <T v="small" c="sub">עד {toTime(Number(at.split(':')[0]) * 60 + Number(at.split(':')[1]) + Number(min))}</T>
       )}
       <Btn title="לשמור ליום הזה" icon="check" kind="gold" onPress={save} />
+      <Btn title={`לקבוע לכל יום ${DAY_NAMES[dow]}`} icon="day" kind="line" onPress={() => {
+        const p = {};
+        if (s.at) { if (!HHMM.test(at)) return; p.atByDay = { ...(s.atByDay || {}), [dow]: at.padStart(5, '0') }; }
+        if (s.arriveBy) { if (!HHMM.test(arr)) return; p.arriveByDay = { ...(s.arriveByDay || {}), [dow]: arr.padStart(5, '0') }; }
+        if (hasMin) p.minutesByDay = { ...(s.minutesByDay || {}), [dow]: Number(min) || 0 };
+        onSaveWeekly(p);
+      }} />
       {!!ov && <Btn title="להחזיר לרגיל" icon="undo" kind="line" onPress={() => onSave(null)} />}
       <Btn title="לבטל ביום הזה" icon="x" kind="ghost" onPress={() => onSave({ off: true })} />
     </View>
@@ -226,7 +233,12 @@ export default function DayScreen({ go }) {
             )}
             {sel.status !== 'done' && (
               <OverrideEditor key={sel.id + which} s={(settings.stations || []).find(x => x.id === sel.id) || sel}
-                ov={overrides[sel.id]} onSave={p => { setOverride(sel.id, p); setSel(null); }} />
+                ov={overrides[sel.id]} onSave={p => { setOverride(sel.id, p); setSel(null); }}
+                dow={dayDate.getDay()}
+                onSaveWeekly={p => {
+                  actions.saveSettings({ ...settings, stations: settings.stations.map(x => x.id === sel.id ? { ...x, ...p } : x) });
+                  setOverride(sel.id, null); setSel(null);
+                }} />
             )}
           </View>
         )}
