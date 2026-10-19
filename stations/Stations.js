@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { View, Alert, AppState, Pressable } from 'react-native';
 import { useDay } from '../lib/DayContext';
-import { evaluateMinyan } from '../lib/engine';
+import { evaluateMinyan, planDay } from '../lib/engine';
 import { openWaze, openApp, openAppAt, openVideoCamera, dial, shareText } from '../lib/launch';
 import { toTime, fmtDur, fmtClock, toMin, dateKey, addDays } from '../lib/time';
 import { useT, SP, R } from '../lib/theme';
@@ -270,8 +270,11 @@ function Drive({ s }) {
   };
   const arrived = () => {
     setReturned(false); opened.current = false;
-    if (leg + 1 >= legs.length) actions.done(s.id, { leg: leg + 1 });
-    else actions.setData(s.id, { leg: leg + 1 });
+    // מתי הגענו לכל תחנה — כדי ללמוד כמה זמן לוקחת כל נסיעה
+    const nowM = Math.round((Date.now() - new Date(new Date().setHours(0, 0, 0, 0)).getTime()) / 6000) / 10;
+    const legAt = { ...(s.rec?.data?.legAt || {}), [leg]: nowM };
+    if (leg + 1 >= legs.length) actions.done(s.id, { leg: leg + 1, legAt, order: legs });
+    else actions.setData(s.id, { leg: leg + 1, legAt });
   };
 
   return (
@@ -311,7 +314,8 @@ function Drive({ s }) {
 // ───────────── בחירת מניין ─────────────
 function Minyan({ s }) {
   const ctx = useDay();
-  const { actions, settings, state, zmanim, now, dayDate } = ctx;
+  const { actions, state, zmanim, now, dayDate } = ctx;
+  const settings = ctx.eff || ctx.settings;
   const t = useT();
   const opts = evaluateMinyan({ settings, date: dayDate, state, zmanim, now, prayer: s.prayer });
   const chosen = state.choices?.[s.prayer];
@@ -346,11 +350,18 @@ function Minyan({ s }) {
         );
       })}
       {!opts.length && <T c="sub">לא הוגדרו מניינים — הגדרות ← מניינים</T>}
-      {opts.length > 0 && !opts.some(o => o.ok) && (
-        <Btn title={opts.some(o => o.reachable) ? 'אין מניין שמספיק לכולל — ביחידות אחרי הכולל' : 'כל המניינים עברו — להתפלל ביחידות'}
-          icon="check" kind="gold" style={{ marginTop: SP.md }}
-          onPress={() => actions.done(s.id, { picked: 'alone' })} />
-      )}
+      {(!opts.some(o => o.ok)) && (() => {
+        // ביחידות — האם מספיקים לפני הכולל? (עד 9:15 בערך: קרבנות + שחרית + נסיעה)
+        const sim = planDay({ settings, date: dayDate, state: { ...state, choices: { ...(state.choices || {}), [s.prayer]: 'alone' } }, zmanim, now, noProtect: true });
+        const pi = sim.list.findIndex(x => x.type === 'prayer' && x.prayer === s.prayer);
+        const lateProt = sim.list.slice(pi + 1).find(x => x.protect && x.late > 0.5);
+        const pr = sim.list[pi];
+        return (
+          <Btn title={!lateProt ? `ביחידות עכשיו${pr ? ` (${toTime(pr.plannedStart)})` : ''} — מספיקים ל${sim.list.slice(pi + 1).find(x => x.protect)?.title || 'הבא'}` : 'לא מספיקים לפני הכולל — ביחידות אחרי הכולל'}
+            icon="check" kind="gold" style={{ marginTop: SP.md }}
+            onPress={() => { actions.choose(s.prayer, 'alone'); actions.done(s.id, { picked: 'alone' }); }} />
+        );
+      })()}
     </View>
   );
 }

@@ -33,7 +33,7 @@ ok(!opts.find(o => o.time === '08:00').reachable, 'מניין 08:00 כבר עב�
 ok(opts.find(o => o.time === '08:30').ok, 'מניין 08:30 — מספיקים לכולל');
 ok(!opts.some(o => o.time === '09:30'), 'ראשון — אין מניין 09:30');
 p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '08:30' } }, zmanim: z, now: m });
-ok(Math.round(find(p, 'study_am').duration) === 27, 'הלימוד לפני התפילה ממלא את הזמן עד 08:30');
+ok(Math.round(find(p, 'study_am').duration) === 17 && toTime(find(p, 'korbanot').plannedStart) === '08:20', 'הלימוד עד 08:20, קרבנות, ומניין 08:30');
 
 // שלישי — איסוף מענדלה ב-12:45
 const tue = new Date('2026-10-20T05:00:00');
@@ -146,7 +146,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   // מגיעים לבית הכנסת ב-9:01 (כמו היום): מניין 9:15, ההכנה מתבטלת, בכולל ב-10:00
   let st = mk([...before, 'drive_mikveh', 'mikveh', 'drive_shul']);
   let q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('09:01') });
-  ok(toTime(find(q, 'shacharit').plannedStart) === '09:15', 'מגיעים 9:01 — מניין 9:15');
+  ok(!find(q, 'shacharit').anchor && find(q, 'shacharit').plannedStart <= toMin('09:15') && find(q, 'korbanot').plannedStart < toMin('09:05'), 'מגיעים 9:01 — אין מניין: קרבנות מיד ושחרית ביחידות לפני 9:15 (' + toTime(find(q, 'shacharit').plannedStart) + ')');
   ok(find(q, 'kollel').late < 0.5 && find(q, 'drive_kollel').late < 0.5, 'מגיעים 9:01 — בכולל ב-10:00 בלי איחור');
   // מגיעים ב-9:20 — אין מניין שמספיק: שחרית ביחידות אחרי הכולל
   q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('09:20') });
@@ -168,7 +168,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   // אחרי הכולל, ושחרית עוד לא — שחרית ביחידות עכשיו
   delete st.stations.shacharit;
   q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('11:34') });
-  ok(q.current?.id === 'shacharit' && q.current.alone, 'אחרי הכולל בלי שחרית — שחרית ביחידות עכשיו');
+  ok(q.current?.id === 'korbanot' && q.list[q.currentIndex + 1].id === 'shacharit' && q.list[q.currentIndex + 1].alone, 'אחרי הכולל בלי שחרית — קרבנות ושחרית ביחידות עכשיו');
   // התפללו ביחידות אחרי הכולל — מוצג אחרי הכולל, והלאה לעריכה
   st.stations.shacharit = { status: 'done', start: toMin('11:35'), end: toMin('12:05') };
   q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('12:06') });
@@ -243,6 +243,18 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const e = applySleepPlan(S, pl);
   ok(e.wakeTime === '07:10' && e.dayClose.hardClose === '24:40' && e.dayClose.firstReminder === '23:40', 'מוחל על ההשכמה וסגירת היום');
   ok(sleepPlan(S, []).wake === S.wakeTime, 'בלי נתונים — כמו בהגדרות');
+}
+
+// ביחידות — 9:15 הוא הגבול: מתחיל קרבנות 9:05 → בכולל בזמן; 9:25 → אחרי הכולל
+{
+  const day = new Date(2026, 9, 18, 6);
+  const st = { stations: {} };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit']) st.stations[id] = { status: 'done', start: 400, end: 400 };
+  st.choices = { shacharit: 'alone' };
+  let q = planDay({ settings: S, date: day, state: st, zmanim: z, now: toMin('09:05') });
+  ok(find(q, 'kollel').late < 0.5 && q.list.indexOf(find(q, 'shacharit')) < q.list.indexOf(find(q, 'kollel')), 'ביחידות מ-9:05 — לפני הכולל');
+  q = planDay({ settings: S, date: day, state: st, zmanim: z, now: toMin('09:25') });
+  ok(q.list.indexOf(find(q, 'shacharit')) > q.list.indexOf(find(q, 'kollel')) && q.list.indexOf(find(q, 'korbanot')) > q.list.indexOf(find(q, 'kollel')), 'ביחידות מ-9:25 — קרבנות ושחרית אחרי הכולל');
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
