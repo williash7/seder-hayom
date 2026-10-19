@@ -257,5 +257,15 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(q.list.indexOf(find(q, 'shacharit')) > q.list.indexOf(find(q, 'kollel')) && q.list.indexOf(find(q, 'korbanot')) > q.list.indexOf(find(q, 'kollel')), 'ביחידות מ-9:25 — קרבנות ושחרית אחרי הכולל');
 }
 
+// שני: בבית עם הילדים עד ש-מירי חוזרת, איסוף, ומנחה רבע שעה לפני השקיעה (17:26 → 17:10)
+{
+  const mon = new Date(2026, 9, 19, 6);
+  const q = planDay({ settings: S, date: mon, state: {}, zmanim: z, now: 300 });
+  ok(!find(q, 'mincha') && toTime(find(q, 'mincha_mon').plannedStart) === '17:10', 'שני — מנחה ב-17:10 לפני השקיעה');
+  ok(q.list.indexOf(find(q, 'mincha_mon')) > q.list.indexOf(find(q, 'drive_tzivia')) && find(q, 'drive_tzivia').late < 1, 'שני — קודם האיסוף, אחר כך מנחה');
+  ok(find(q, 'tasks').title.includes('מירי'), 'שני — בבית עם הילדים');
+  for (let i = 1; i < q.list.length; i++) if (q.list[i].plannedStart + 0.01 < q.list[i - 1].plannedEnd) ok(false, 'שני — חפיפה: ' + q.list[i].title);
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
