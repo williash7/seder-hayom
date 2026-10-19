@@ -7,6 +7,7 @@ import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Field, Chip, Sheet, Check } from '../components/UI';
 import * as Native from '../lib/native';
+import LockPause from '../components/LockPause';
 
 let cache = null;           // רשימת האפליקציות (עם אייקונים) — נטענת פעם אחת
 let freeUntil = {};         // pkg → עד מתי פתוח בלי לשאול שוב
@@ -52,7 +53,8 @@ export default function AppsScreen() {
     return new Set([...appPkgs, ...(settings.launcher?.free || [])]);
   }, [settings, mode]);
 
-  const isFree = pkg => free.has(pkg) || (freeUntil[pkg] || 0) > Date.now();
+  const { lockPausedUntil } = useDay();
+  const isFree = pkg => (lockPausedUntil || 0) > Date.now() || free.has(pkg) || (freeUntil[pkg] || 0) > Date.now();
   const open = pkg => { if (!Native.openPackage(pkg)) Alert.alert('לא נפתח', 'האפליקציה לא נמצאה'); };
   const tap = a => (isFree(a.pkg) ? open(a.pkg) : (setAsk(a), setReason(''), setAlways(false)));
 
@@ -88,6 +90,7 @@ export default function AppsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <ScrollView contentContainerStyle={{ padding: SP.xl, paddingTop: ins.top + SP.lg, paddingBottom: 130 }} keyboardShouldPersistTaps="handled">
+        <LockPause />
         <T v="title">אפליקציות</T>
         <T c="sub" style={{ marginTop: 2 }}>
           {mode === 'night' ? 'לילה — רק השעון פתוח' : mode === 'home' ? 'זמן בית — רק מה שמותר' : 'פתוחות למעלה; השאר — עם סיבה'}

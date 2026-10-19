@@ -8,6 +8,7 @@ import { T, Btn, Card, Ring, Chip, Sheet, Field } from '../components/UI';
 import { useState } from 'react';
 import { appLabel } from '../lib/native';
 import * as Native from '../lib/native';
+import LockPause from '../components/LockPause';
 import Icon from '../components/Icon';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
@@ -33,7 +34,7 @@ export default function NowScreen({ go }) {
       </T>
     </View>
   ) : null;
-  const header = (<>{nightBar}
+  const header = (<>{nightBar}<LockPause />
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
       <View>
         <T v="tiny" c="sub">יום {DAY_NAMES[dow]}{hebrew ? ` · ${hebrew}` : ''}</T>
