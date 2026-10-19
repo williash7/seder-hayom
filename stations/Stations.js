@@ -28,14 +28,45 @@ function Actions({ children }) {
   return <View style={{ gap: SP.sm, marginTop: SP.xl }}>{children}</View>;
 }
 
+// מעקב שינה: המצוי, התכנית של היום, והרצוי
+export function SleepCard({ sleep }) {
+  const t = useT();
+  const Row = ({ k, a, b, c }) => (
+    <View style={{ flexDirection: 'row', paddingVertical: 4 }}>
+      <T v="small" c="sub" style={{ flex: 1.2 }}>{k}</T>
+      <T v="small" style={{ flex: 1, textAlign: 'center' }}>{a || '—'}</T>
+      <T v="bodyB" style={{ flex: 1, textAlign: 'center', color: t.gold }}>{b}</T>
+      <T v="small" style={{ flex: 1, textAlign: 'center' }}>{c}</T>
+    </View>
+  );
+  return (
+    <Card tone="sunk" style={{ marginBottom: SP.md }}>
+      <View style={{ flexDirection: 'row' }}>
+        <T v="tiny" c="sub" style={{ flex: 1.2 }} />
+        <T v="tiny" c="sub" style={{ flex: 1, textAlign: 'center' }}>בפועל</T>
+        <T v="tiny" c="sub" style={{ flex: 1, textAlign: 'center' }}>השבוע</T>
+        <T v="tiny" c="sub" style={{ flex: 1, textAlign: 'center' }}>היעד</T>
+      </View>
+      <Row k="שינה" a={sleep.actualSleep && toTime(toMin(sleep.actualSleep))} b={toTime(toMin(sleep.sleep))} c={sleep.goal.sleep} />
+      <Row k="השכמה" a={sleep.actualWake} b={sleep.wake} c={sleep.goal.wake} />
+      <T v="tiny" c="sub" style={{ marginTop: 4 }}>
+        {sleep.days >= 2 ? 'כל יום מתכננים 10 דק׳ לפני הממוצע של הימים האחרונים — עד שמגיעים ליעד' : 'אחרי יומיים של "קמתי" ו"לילה טוב" — מתחילים להקדים בהדרגה'}
+      </T>
+    </Card>
+  );
+}
+
 // ───────────── השכמה ─────────────
 function Wake({ s }) {
-  const { actions, settings } = useDay();
+  const { actions, settings, eff, sleep } = useDay();
   return (
     <View>
       <T v="body" c="sub" style={{ textAlign: 'center' }}>
-        השעון יצלצל ב-{settings.wakeTime}, ויחזור כל {settings.alarm?.repeatEveryMin || 2} דקות עד שתסמן.
+        השעון יצלצל ב-{(eff || settings).wakeTime}, ויחזור כל {settings.alarm?.repeatEveryMin || 2} דקות עד שתסמן.
       </T>
+      {sleep?.actualWake && <T v="small" c="sub" style={{ textAlign: 'center', marginTop: 4 }}>
+        בימים האחרונים קמת בערך ב-{sleep.actualWake} · היעד {sleep.goal.wake}
+      </T>}
       <Actions>
         <Btn title="קמתי — מודה אני" icon="sun" kind="gold" onPress={() => actions.done(s.id)} />
       </Actions>
@@ -741,10 +772,11 @@ function Close({ s }) {
 }
 
 function Sleep({ s }) {
-  const { actions, settings } = useDay();
+  const { actions, settings, eff, sleep } = useDay();
   return (
     <View>
-      <T v="body" c="sub" style={{ textAlign: 'center' }}>השכמה מחר ב-{settings.wakeTime}. אחרי "לילה טוב" הטלפון ננעל — פתוחים רק השעון והטלפון.</T>
+      {sleep && <SleepCard sleep={sleep} />}
+      <T v="body" c="sub" style={{ textAlign: 'center' }}>השכמה מחר ב-{(eff || settings).wakeTime}. אחרי "לילה טוב" הטלפון ננעל — פתוחים רק השעון והטלפון.</T>
       <Actions><Btn title="לילה טוב" icon="moon" onPress={() => actions.done(s.id)} /></Actions>
     </View>
   );

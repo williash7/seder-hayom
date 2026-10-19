@@ -14,6 +14,7 @@ import * as S from '../lib/store';
 import * as Native from '../lib/native';
 import { dateKey, addDays } from '../lib/time';
 import { planDay } from '../lib/engine';
+import { SleepCard } from '../stations/Stations';
 import { getZmanim } from '../lib/zmanim';
 
 const HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/;
@@ -109,7 +110,7 @@ function PhoneLog() {
 export default function DayScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan: todayPlan, zmanim: todayZ, dayDate: today, hebrew, actions, settings, eff, state: todayState } = useDay();
+  const { plan: todayPlan, zmanim: todayZ, dayDate: today, hebrew, actions, settings, eff, sleep, state: todayState } = useDay();
   // היום / מחר
   const [which, setWhich] = useState('today');
   const tDate = addDays(today, 1), tKey = dateKey(tDate);
@@ -164,6 +165,7 @@ export default function DayScreen({ go }) {
           </View>
         )}
 
+        {isToday && sleep && <View style={{ marginTop: SP.md }}><SleepCard sleep={sleep} /></View>}
         {pastCount > 0 && (
           <Btn title={showPast ? 'להסתיר את מה שעבר' : `להראות את מה שעבר (${pastCount})`} icon={showPast ? 'minus' : 'plus'}
             kind="ghost" small style={{ marginTop: SP.lg, alignSelf: 'flex-start' }} onPress={() => setShowPast(!showPast)} />

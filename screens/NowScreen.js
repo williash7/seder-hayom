@@ -17,7 +17,7 @@ function KeepAwake() { useKeepAwake(); return null; }
 export default function NowScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan, now, hebrew, dayDate, zmanim, settings, actions, loaded, night, nightUntil } = useDay();
+  const { plan, now, hebrew, dayDate, zmanim, settings, eff, actions, loaded, night, nightUntil } = useDay();
   const sec = useSeconds();
   if (!loaded) return <View style={{ flex: 1, backgroundColor: t.bg }} />;
 
@@ -61,7 +61,7 @@ export default function NowScreen({ go }) {
   if (plan.empty) return wrap(<Center icon="sun" title="אין תכנית להיום" sub="אפשר להוסיף תחנות ליום הזה בהגדרות" />);
   if (plan.finished) {
     return wrap(
-      <Center icon="moon" title="לילה טוב" sub={`השכמה ב-${settings.wakeTime}`}>
+      <Center icon="moon" title="לילה טוב" sub={`השכמה ב-${(eff || settings).wakeTime}`}>
         <Btn title="פתח מחדש את התחנה האחרונה" kind="line" small style={{ marginTop: SP.xl }}
           onPress={() => actions.undo(plan.list[plan.list.length - 1].id)} />
       </Center>

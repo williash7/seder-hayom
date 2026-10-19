@@ -100,6 +100,7 @@ ok(wash.join(',') === '17:3,20:3,22:2,25:3,28:3,31:3,3:3,5:2', 'כביסה — '
 
 // השכבת הילדים — בכל ערב כולל מוצ״ש, משך נלמד
 import { applyLearned } from '../../lib/learn';
+import { sleepPlan, applySleepPlan } from '../../lib/sleep';
 const S2 = applyLearned(S, { bedtime_kids: [40, 50, 45] });
 p = planDay({ settings: S2, date: sun, state: {}, zmanim: z, now: 300 });
 ok(Math.round(find(p, 'bedtime_kids').duration) === 45, 'השכבה — 45 דק׳ לפי הממוצע שנלמד');
@@ -230,6 +231,18 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const sw = L.stations.find(x => x.id === 'sandwiches');
   ok(sw.steps.find(x => x.id === 'veg').minutes === 9 && sw.perItem === 6, 'זמני הכריכים נלמדו');
   ok(L.stations.find(x => x.id === 'shiur_prep').minutes === 10, 'מדידה אחת — עוד לא משנים');
+}
+
+// הקדמה הדרגתית: קם ב-7:20 ונרדם ב-00:50 → השבוע 7:10 ו-00:40; כשמגיעים — לא לפני היעד
+{
+  const h = [{ wake: 440, sleep: 1490 }, { wake: 440, sleep: 1490 }];
+  const pl = sleepPlan(S, h);
+  ok(pl.wake === '07:10' && pl.sleep === '24:40', 'הקדמה של 10 דק׳ מהממוצע (' + pl.wake + ', ' + pl.sleep + ')');
+  const pl2 = sleepPlan(S, [{ wake: 392, sleep: 1415 }, { wake: 390, sleep: 1412 }]);
+  ok(pl2.wake === '06:30' && pl2.sleep === '23:30', 'לא לפני היעד');
+  const e = applySleepPlan(S, pl);
+  ok(e.wakeTime === '07:10' && e.dayClose.hardClose === '24:40' && e.dayClose.firstReminder === '23:40', 'מוחל על ההשכמה וסגירת היום');
+  ok(sleepPlan(S, []).wake === S.wakeTime, 'בלי נתונים — כמו בהגדרות');
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
