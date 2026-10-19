@@ -128,7 +128,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 {
   const q = planDay({ settings: S2, date: new Date(2026, 9, 18, 6), state: {}, zmanim: z, now: 300 });
   const sw = find(q, 'sandwiches');
-  ok(sw.steps.length === 5 && sw.steps[0].label === 'מענדלה — חביתה גבינה' && sw.steps.at(-1).id === 'veg', 'ראשון — 4 כריכים + ירקות');
+  ok(sw.steps.length === 6 && sw.steps[0].label === 'מענדלה — חביתה גבינה' && sw.steps.at(-1).id === 'water', 'ראשון — 4 כריכים + ירקות + מים');
   const q2 = planDay({ settings: S2, date: new Date(2026, 9, 20, 6), state: {}, zmanim: z, now: 300 });
   ok(find(q2, 'sandwiches').steps.filter(x => x.label.startsWith('מענדלה')).length === 1, 'שלישי — למענדלה כריך אחד');
   const ids = q.list.map(x => x.id);
@@ -222,6 +222,14 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const nx = q2.list[q2.currentIndex + 1];
   ok(toTime(find(q2, 'bedtime_kids').plannedEnd) === '20:20' && find(q2, 'shiur_eve').late < 0.5, 'השכבה שהתחילה 20:12 — עד 20:20');
   ok(q2.list.slice(q2.currentIndex + 1).find(x => x.status === 'pending')?.id === 'drive_shiur', 'אחרי ההשכבה — לשיעור');
+}
+
+// לומדים מהימים האחרונים: הירקות לקחו 8 ו-10 דק׳ → 9; כריך לקח 6 → 6 לכל כריך
+{
+  const L = applyLearned(S, { 'sandwiches:veg': [8, 10], 'sandwiches:menu': [6, 6], 'shiur_prep': [15] });
+  const sw = L.stations.find(x => x.id === 'sandwiches');
+  ok(sw.steps.find(x => x.id === 'veg').minutes === 9 && sw.perItem === 6, 'זמני הכריכים נלמדו');
+  ok(L.stations.find(x => x.id === 'shiur_prep').minutes === 10, 'מדידה אחת — עוד לא משנים');
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
