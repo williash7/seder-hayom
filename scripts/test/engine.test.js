@@ -267,5 +267,16 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   for (let i = 1; i < q.list.length; i++) if (q.list[i].plannedStart + 0.01 < q.list[i - 1].plannedEnd) ok(false, 'שני — חפיפה: ' + q.list[i].title);
 }
 
+// שלישי: מגיעים 9:31 — שחרית ביחידות אחרי הכולל, אבל לא על חשבון אלכס ומענדלה
+{
+  const tue = new Date(2026, 9, 20, 6);
+  const st = { stations: {} };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul']) st.stations[id] = { status: 'done', start: 400, end: 400 };
+  const q = planDay({ settings: S, date: tue, state: st, zmanim: z, now: toMin('09:31') });
+  ok(find(q, 'kollel').late < 0.5 && find(q, 'alex_shiur').late < 0.5 && find(q, 'drive_alex').late < 0.5 && find(q, 'drive_mendele_tue').late < 0.5, 'שלישי — כולל, אלכס ומענדלה בזמן');
+  ok(q.list.indexOf(find(q, 'shacharit')) > q.list.indexOf(find(q, 'alex_shiur')), 'שלישי — שחרית ביחידות אחרי אלכס (' + toTime(find(q, 'shacharit').plannedStart) + ')');
+  for (let i = 1; i < q.list.length; i++) if (q.list[i].plannedStart + 0.01 < q.list[i - 1].plannedEnd) ok(false, 'שלישי — חפיפה: ' + q.list[i].title);
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
