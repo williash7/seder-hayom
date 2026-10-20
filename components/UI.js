@@ -80,12 +80,12 @@ export function Check({ label, checked, onPress, sub, right }) {
   );
 }
 
-export function Chip({ label, active, onPress, tone }) {
+export function Chip({ label, active, onPress, onLongPress, tone }) {
   const t = useT();
   const bg = active ? t.navy : tone === 'warn' ? t.warnSoft : tone === 'ok' ? t.okSoft : t.sunk;
   const fg = active ? t.onNavy : tone === 'warn' ? t.warn : tone === 'ok' ? t.ok : t.ink;
   return (
-    <Pressable onPress={() => { tap(); onPress?.(); }}
+    <Pressable onPress={() => { tap(); onPress?.(); }} onLongPress={onLongPress}
       style={{ backgroundColor: bg, borderRadius: R.pill, paddingVertical: 7, paddingHorizontal: 13 }}>
       <Text style={{ color: fg, fontSize: 14, fontWeight: '700' }}>{label}</Text>
     </Pressable>

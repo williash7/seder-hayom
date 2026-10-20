@@ -7,7 +7,10 @@ import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Field, Chip, Sheet, Card } from './UI';
 import Icon from './Icon';
-import { fmtDur } from '../lib/time';
+import { fmtDur, toMin } from '../lib/time';
+import { parsePlan } from '../lib/parsePlan';
+
+const HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
 const KINDS = [
   { k: 'drive', label: 'נסיעה', icon: 'car' },
@@ -25,6 +28,25 @@ export default function PlanChange() {
   const [items, setItems] = useState([]);
   const [newPlaces, setNewPlaces] = useState({});
   const [edit, setEdit] = useState(null);   // הפריט שבונים עכשיו
+  const [say, setSay] = useState('');       // משפט מוקלד/מוכתב
+  const [when, setWhen] = useState('now');
+  const [atTime, setAtTime] = useState('');
+  const [saveName, setSaveName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const seqs = settings.sequences || [];
+
+  const build = () => {
+    const [it, np] = parsePlan(say, { ...(settings.places || {}), ...newPlaces });
+    if (!it.length) return;
+    setItems(l => [...l, ...it]); setNewPlaces(p => ({ ...p, ...np })); setSay('');
+  };
+  const saveSeq = () => {
+    if (!saveName.trim() || !items.length) return;
+    const next = [...seqs.filter(x => x.name !== saveName.trim()), { id: 's' + Date.now(), name: saveName.trim(), items }];
+    actions.saveSettings({ ...settings, places: { ...(settings.places || {}), ...newPlaces }, sequences: next });
+    setNewPlaces({}); setSaving(false); setSaveName('');
+  };
+  const delSeq = id => actions.saveSettings({ ...settings, sequences: seqs.filter(x => x.id !== id) });
 
   const places = { ...(settings.places || {}), ...newPlaces };
   const start = k => setEdit({ k, title: '', minutes: k === 'study' ? 30 : k === 'stay' ? 20 : 10, place: null, name: '', address: '', drive: 10 });
@@ -56,8 +78,9 @@ export default function PlanChange() {
 
   const commit = () => {
     if (!items.length) return;
-    actions.addExtras(items, newPlaces);
-    setItems([]); setNewPlaces({}); setEdit(null); setOpen(false);
+    if (when === 'at' && !HHMM.test(atTime)) return;
+    actions.addExtras(items, newPlaces, when === 'at' ? atTime.padStart(5, '0') : null);
+    setItems([]); setNewPlaces({}); setEdit(null); setOpen(false); setWhen('now'); setAtTime('');
   };
   const close = () => { setOpen(false); setEdit(null); };
   const total = items.reduce((a, x) => a + (x.type === 'drive' ? (Number(places[x.legs[0]]?.minutes) || 10) : x.minutes || 0), 0);
@@ -82,13 +105,51 @@ export default function PlanChange() {
           ))}
           {items.length > 0 && <T v="small" c="sub" style={{ marginBottom: SP.sm }}>סה״כ כ-{fmtDur(total)}. מה שקבוע בהמשך היום לא זז — השאר יתקצר או יזוז.</T>}
 
+          {!edit && !items.length && seqs.length > 0 && (
+            <>
+              <T v="tiny" c="sub" style={{ marginBottom: SP.sm }}>רצפים שמורים (לחיצה ארוכה — למחוק):</T>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginBottom: SP.md }}>
+                {seqs.map(q => (
+                  <Chip key={q.id} label={q.name} onPress={() => setItems(q.items)} onLongPress={() => delSeq(q.id)} />
+                ))}
+              </View>
+            </>
+          )}
+          {!edit && (
+            <View style={{ flexDirection: 'row', gap: SP.sm, alignItems: 'flex-start' }}>
+              <Field value={say} onChangeText={setSay} multiline style={{ flex: 1, minHeight: 56 }}
+                placeholder={'לכתוב או להכתיב (המיקרופון במקלדת): "נסיעה למקס סטוק, חצי שעה שם, ואז לבית חב״ד"'} />
+              <Btn title="לבנות" small kind="line" disabled={!say.trim()} onPress={build} />
+            </View>
+          )}
           {!edit ? (
             <>
-              <T v="tiny" c="sub" style={{ marginTop: SP.sm, marginBottom: SP.sm }}>{items.length ? 'ואחר כך:' : 'להוסיף:'}</T>
+              <T v="tiny" c="sub" style={{ marginTop: SP.md, marginBottom: SP.sm }}>{items.length ? 'ואחר כך:' : 'או להוסיף אחד-אחד:'}</T>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm }}>
                 {KINDS.map(k => <Chip key={k.k} label={k.label} onPress={() => start(k.k)} />)}
               </View>
-              <Btn title={items.length ? `להכניס עכשיו (${items.length})` : 'להכניס עכשיו'} icon="check" kind="gold" disabled={!items.length}
+              {items.length > 0 && (
+                <>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginTop: SP.lg, alignItems: 'center' }}>
+                    <T v="small" c="sub">מתי?</T>
+                    <Chip label="עכשיו" active={when === 'now'} onPress={() => setWhen('now')} />
+                    <Chip label="בשעה…" active={when === 'at'} onPress={() => setWhen('at')} />
+                    {when === 'at' && <Field value={atTime} onChangeText={setAtTime} placeholder="17:00" keyboardType="numbers-and-punctuation" style={{ width: 90 }} />}
+                  </View>
+                  {saving ? (
+                    <View style={{ flexDirection: 'row', gap: SP.sm, marginTop: SP.md }}>
+                      <Field value={saveName} onChangeText={setSaveName} placeholder="שם לרצף (למשל: קניות בעיר)" style={{ flex: 1 }} autoFocus />
+                      <Btn title="לשמור" small kind="line" disabled={!saveName.trim()} onPress={saveSeq} />
+                    </View>
+                  ) : (
+                    <Pressable onPress={() => setSaving(true)} style={{ marginTop: SP.md }}>
+                      <T v="small" style={{ color: t.gold }}>+ לשמור את הרצף לפעם הבאה</T>
+                    </Pressable>
+                  )}
+                </>
+              )}
+              <Btn title={!items.length ? 'להכניס' : when === 'at' ? `להכניס ב-${atTime || '…'} (${items.length})` : `להכניס עכשיו (${items.length})`} icon="check" kind="gold"
+                disabled={!items.length || (when === 'at' && !HHMM.test(atTime))}
                 style={{ marginTop: SP.lg }} onPress={commit} />
             </>
           ) : (

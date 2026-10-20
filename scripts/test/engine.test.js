@@ -101,6 +101,7 @@ ok(wash.join(',') === '17:3,20:3,22:2,25:3,28:3,31:3,3:3,5:2', 'כביסה — '
 // השכבת הילדים — בכל ערב כולל מוצ״ש, משך נלמד
 import { applyLearned } from '../../lib/learn';
 import { sleepPlan, applySleepPlan } from '../../lib/sleep';
+import { parsePlan } from '../../lib/parsePlan';
 const S2 = applyLearned(S, { bedtime_kids: [40, 50, 45] });
 p = planDay({ settings: S2, date: sun, state: {}, zmanim: z, now: 300 });
 ok(Math.round(find(p, 'bedtime_kids').duration) === 45, 'השכבה — 45 דק׳ לפי הממוצע שנלמד');
@@ -318,6 +319,16 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const q = planDay({ settings: S7, date: d, state: { ...st, extras: ex }, zmanim: z, now: toMin('17:00') });
   ok(q.current.id === 'x1' && q.list[q.currentIndex + 1].id === 'x2' && q.list[q.currentIndex + 2].id === 'x3', 'שינוי בתוכנית — שלוש תחנות לפי הסדר, עכשיו');
   ok(toTime(find(q, 'showers').plannedStart) === '18:45' && find(q, 'showers').late < 0.5, 'שינוי בתוכנית — מה שקבוע לא זז');
+}
+
+// הכתבה: "נסיעה למקס סטוק, חצי שעה שם, ואז לבית חבד ולימוד 20 דקות"
+{
+  const [it, np] = parsePlan('נסיעה למקס סטוק, חצי שעה שם, ואז לבית חבד ולימוד 20 דקות', S.places);
+  ok(it.length === 4 && it[0].type === 'drive' && it[1].minutes === 30 && it[1].title === 'מקס סטוק', 'הכתבה — מקס סטוק וחצי שעה שם (' + it.map(x => x.title + ':' + (x.minutes || '')).join(' | ') + ')');
+  ok(it[2].type === 'drive' && it[2].legs[0] === 'chabad_house' && it[3].type === 'study' && it[3].minutes === 20, 'הכתבה — בית חב״ד מהשמורים, ולימוד 20 דק׳');
+  ok(Object.keys(np).length === 1 && Object.values(np)[0].name === 'מקס סטוק', 'הכתבה — מקס סטוק נשמר כמקום חדש');
+  const [it2] = parsePlan('להתקשר לאבא רבע שעה', S.places);
+  ok(it2.length === 1 && it2[0].type === 'timer' && it2[0].minutes === 15 && it2[0].title === 'להתקשר לאבא', 'הכתבה — משימה עם זמן');
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
