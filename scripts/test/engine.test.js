@@ -82,7 +82,7 @@ ok(!find(p, 'shacharit') && !find(p, 'wake'), 'שבת — אין תחנות של
 
 // השיעורים השבוע
 const wl = weekLessons(S, new Date('2026-10-17T20:00:00'));  // מוצאי שבת → השבוע הבא
-ok(wl.length === 8, 'מוצ״ש — 8 שיעורים בשבוע הבא (5 כולל, 2 ערב, אלכס) — יצא ' + wl.length);
+ok(wl.length === 9, 'מוצ״ש — 9 שיעורים בשבוע הבא (5 כולל, 2 ערב, אלכס, בר מצווה) — יצא ' + wl.length);
 ok(wl[0].date === '2026-10-18' && wl[0].at === '10:00', 'הראשון — כולל ביום ראשון');
 const wt = weekLessons(S, new Date('2026-10-20T09:00:00'));  // שלישי
 ok(wt.every(l => l.date >= '2026-10-20') && wt.some(l => l.title.includes('אלכס')), 'שלישי — רק מהיום והלאה, כולל אלכס');
@@ -276,6 +276,14 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(find(q, 'kollel').late < 0.5 && find(q, 'alex_shiur').late < 0.5 && find(q, 'drive_alex').late < 0.5 && find(q, 'drive_mendele_tue').late < 0.5, 'שלישי — כולל, אלכס ומענדלה בזמן');
   ok(q.list.indexOf(find(q, 'shacharit')) > q.list.indexOf(find(q, 'alex_shiur')), 'שלישי — שחרית ביחידות אחרי אלכס (' + toTime(find(q, 'shacharit').plannedStart) + ')');
   for (let i = 1; i < q.list.length; i++) if (q.list[i].plannedStart + 0.01 < q.list[i - 1].plannedEnd) ok(false, 'שלישי — חפיפה: ' + q.list[i].title);
+}
+
+// שלישי: מנחה 14:00, שיעור בר מצווה 14:30–15:30, ואז איסוף
+{
+  const q = planDay({ settings: S, date: new Date(2026, 9, 20, 6), state: {}, zmanim: z, now: 300 });
+  ok(toTime(find(q, 'mincha').plannedStart) === '14:00' && toTime(find(q, 'barmitzva').plannedStart) === '14:30' && find(q, 'barmitzva').late < 0.5, 'שלישי — מנחה 14:00, בר מצווה 14:30');
+  ok(find(q, 'drive_tzivia').late < 0.5, 'שלישי — האיסוף בזמן אחרי הבר מצווה');
+  for (let i = 1; i < q.list.length; i++) if (q.list[i].plannedStart + 0.01 < q.list[i - 1].plannedEnd) ok(false, 'שלישי ב״מ — חפיפה: ' + q.list[i].title);
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
