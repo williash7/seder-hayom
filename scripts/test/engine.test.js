@@ -286,5 +286,21 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   for (let i = 1; i < q.list.length; i++) if (q.list[i].plannedStart + 0.01 < q.list[i - 1].plannedEnd) ok(false, 'שלישי ב״מ — חפיפה: ' + q.list[i].title);
 }
 
+// שגרה דינמית: סימנתי מהר — הסוף מתקדם; התעכבתי — הסוף נדחה
+{
+  const d = new Date(2026, 9, 20, 6);
+  const base = { settings: S, date: d, zmanim: z };
+  const sh = S.stations.find(x => x.id === 'showers');
+  const total = sh.steps.reduce((a, x) => a + x.minutes, 0);
+  const start = toMin('19:00');
+  // אחרי 2 דק׳ סימנתי את ההכנה (5) — נחסכו 3 דק׳
+  let st = { stations: { showers: { start, data: { steps: { prep: start + 2 }, stepStart: start + 2 } } } };
+  let q = planDay({ ...base, state: st, now: start + 2, _items: [sh] });
+  ok(Math.round(find(q, 'showers').duration) === total - 3, 'סימון מוקדם — הזמן הכולל קטן ב-3 דק׳');
+  // מענדלה (10) לוקח 15 — הזמן הכולל גדל ב-5 (פחות ה-3 שנחסכו)
+  q = planDay({ ...base, state: st, now: start + 2 + 15, _items: [sh] });
+  ok(Math.round(find(q, 'showers').duration) === total - 3 + 5, 'עיכוב — הזמן הכולל גדל');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
