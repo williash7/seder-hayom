@@ -302,5 +302,23 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(Math.round(find(q, 'showers').duration) === total - 3 + 5, 'עיכוב — הזמן הכולל גדל');
 }
 
+// שינוי בתוכנית: נסיעה למקס סטוק, 20 דק׳ שם, נסיעה לבית חב״ד — נכנס עכשיו, לפני מה שהיה
+{
+  const d = new Date(2026, 9, 18, 6);
+  const S7 = { ...S, places: { ...S.places, p_max: { name: 'מקס סטוק', address: 'עפולה', minutes: 10 } } };
+  const st = { stations: {} };
+  for (const x of planDay({ settings: S7, date: d, state: {}, zmanim: z, now: 300 }).list) { if (x.id === 'home_time') break; st.stations[x.id] = { status: 'done', start: 300, end: 300 }; }
+  const q0 = planDay({ settings: S7, date: d, state: st, zmanim: z, now: toMin('17:00') });
+  const cur = q0.current.id;
+  const ex = [
+    { id: 'x1', batch: 'b', beforeId: cur, type: 'drive', title: 'למקס סטוק', legs: ['p_max'] },
+    { id: 'x2', batch: 'b', beforeId: cur, type: 'timer', title: 'מקס סטוק', minutes: 20 },
+    { id: 'x3', batch: 'b', beforeId: cur, type: 'drive', title: 'לבית חב״ד', legs: ['chabad_house'] },
+  ];
+  const q = planDay({ settings: S7, date: d, state: { ...st, extras: ex }, zmanim: z, now: toMin('17:00') });
+  ok(q.current.id === 'x1' && q.list[q.currentIndex + 1].id === 'x2' && q.list[q.currentIndex + 2].id === 'x3', 'שינוי בתוכנית — שלוש תחנות לפי הסדר, עכשיו');
+  ok(toTime(find(q, 'showers').plannedStart) === '18:45' && find(q, 'showers').late < 0.5, 'שינוי בתוכנית — מה שקבוע לא זז');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');

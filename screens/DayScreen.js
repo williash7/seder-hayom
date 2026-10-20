@@ -233,7 +233,10 @@ export default function DayScreen({ go }) {
             {isToday && sel.status !== 'done' && sel.status !== 'skipped' && (
               <Btn title="לדלג" icon="skip" kind="ghost" onPress={() => { actions.skip(sel.id); setSel(null); }} />
             )}
-            {sel.status !== 'done' && (
+            {isToday && sel.extra && (
+              <Btn title="להוריד מהתוכנית" icon="x" kind="ghost" onPress={() => { actions.removeExtra(sel.id); setSel(null); }} />
+            )}
+            {sel.status !== 'done' && !sel.extra && (
               <OverrideEditor key={sel.id + which} s={(settings.stations || []).find(x => x.id === sel.id) || sel}
                 ov={overrides[sel.id]} onSave={p => { setOverride(sel.id, p); setSel(null); }}
                 dow={dayDate.getDay()}
