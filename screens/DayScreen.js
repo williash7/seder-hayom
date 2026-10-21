@@ -230,6 +230,14 @@ export default function DayScreen({ go }) {
             {isToday && sel.status === 'current' && (
               <Btn title="לסמן כבוצע" icon="check" kind="ok" onPress={() => { actions.done(sel.id); setSel(null); }} />
             )}
+            {isToday && !['done', 'skipped', 'auto'].includes(sel.status) && (
+              <>
+                {sel.status !== 'current' && (
+                  <Btn title="כבר עשיתי את זה" icon="check" kind="ok" onPress={() => { actions.markDone(sel.id); setSel(null); }} />
+                )}
+                <Btn title="כבר עשיתי הכל עד כאן" icon="check" kind="line" onPress={() => { actions.markDone(sel.id, { upTo: true }); setSel(null); }} />
+              </>
+            )}
             {isToday && sel.status !== 'done' && sel.status !== 'skipped' && (
               <Btn title="לדלג" icon="skip" kind="ghost" onPress={() => { actions.skip(sel.id); setSel(null); }} />
             )}

@@ -10,6 +10,7 @@ import { appLabel } from '../lib/native';
 import * as Native from '../lib/native';
 import LockPause from '../components/LockPause';
 import PlanChange from '../components/PlanChange';
+import CatchUp from '../components/CatchUp';
 import Icon from '../components/Icon';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
@@ -129,6 +130,7 @@ export default function NowScreen({ go }) {
             Alert.alert('לדלג?', s.title, [{ text: 'ביטול', style: 'cancel' }, { text: 'דלג', onPress: () => actions.skip(s.id) }])} />
         )}
       </View>
+      <CatchUp />
     </>
   );
 }

@@ -351,5 +351,15 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(find(q, 'shacharit').anchor && find(q, 'shacharit').late < 0.5 && find(q, 'kollel').late < 0.5, 'מניין 9:00 בלי "איחור", וכולל בזמן');
 }
 
+// סימנתי שחרית כבוצעת, אבל לא את הלימוד שלפניה — לא חוזרים ללימוד
+{
+  const day = new Date(2026, 9, 21, 6);
+  const st = { stations: {} };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit', 'korbanot']) st.stations[id] = { status: 'done', start: 400, end: 400 };
+  st.stations.shacharit = { status: 'done', start: toMin('09:00'), end: toMin('09:13') };
+  const q = planDay({ settings: S, date: day, state: st, zmanim: z, now: toMin('09:23') });
+  ok(q.current?.id !== 'study_am' && find(q, 'study_am').status === 'auto', 'שחרית סומנה — הלימוד שלפניה עבר (עכשיו: ' + q.current?.title + ')');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
