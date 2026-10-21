@@ -1,7 +1,7 @@
 // "אפליקציות" — כשסדר היום הוא מסך הבית, מכאן פותחים את כל השאר.
 // מה שלא ברשימת "פתוח" — נפתח רק אחרי שכותבים בשביל מה (ונרשם ביומן הטלפון).
 import { useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, Pressable, Image, AppState, Alert } from 'react-native';
+import { View, ScrollView, Pressable, Image, AppState, Alert, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
@@ -71,6 +71,17 @@ export default function AppsScreen() {
     open(a.pkg);
   };
 
+  // רשימת כל האפליקציות + זמן שימוש השבוע — לשלוח ל-Claude כדי לחלק לקבוצות
+  const shareList = async () => {
+    const since = Date.now() - 7 * 86400000;
+    const usage = Object.fromEntries((Native.usageSince(since) || []).map(u => [u.pkg, u]));
+    const lines = apps.map(a => {
+      const u = usage[a.pkg];
+      return `${a.label} | ${a.pkg}${u ? ` | ${Math.round(u.minutes)} דק׳ השבוע, ${u.opens} פתיחות` : ''}`;
+    });
+    try { await Share.share({ message: `האפליקציות שלי (${apps.length}):\n` + lines.join('\n') }); } catch {}
+  };
+
   const shown = apps.filter(a => !q || a.label.toLowerCase().includes(q.toLowerCase()));
   const top = shown.filter(a => isFree(a.pkg));
   const rest = shown.filter(a => !isFree(a.pkg));
@@ -91,6 +102,11 @@ export default function AppsScreen() {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <ScrollView contentContainerStyle={{ padding: SP.xl, paddingTop: ins.top + SP.lg, paddingBottom: 130 }} keyboardShouldPersistTaps="handled">
         <LockPause />
+        {apps.length > 0 && (
+          <Pressable onPress={shareList} style={{ alignSelf: 'flex-start', paddingVertical: 4 }}>
+            <T v="small" c="sub">לשתף את רשימת האפליקציות (כדי לחלק לקבוצות)</T>
+          </Pressable>
+        )}
         <T v="title">אפליקציות</T>
         <T c="sub" style={{ marginTop: 2 }}>
           {mode === 'night' ? 'לילה — רק השעון פתוח' : mode === 'home' ? 'זמן בית — רק מה שמותר' : 'פתוחות למעלה; השאר — עם סיבה'}
