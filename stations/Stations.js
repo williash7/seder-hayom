@@ -136,7 +136,7 @@ function TextSt({ s, go }) {
   const text = settings.texts?.[s.textKey];
   const app = settings.apps?.[s.appKey];
   useEffect(() => { actions.start(s.id); }, [s.id]);
-  const open = () => openAppAt(app, s.path, { wd: dayDate.getDay() }).catch(fail);
+  const open = () => openAppAt(app, s.path, { wd: dayDate.getDay(), min: Math.max(1, Math.round(s.duration || s.minutes || 10)), end: toTime(s.plannedEnd) }).catch(fail);
   if (!text && app) {
     return (
       <Actions>
@@ -210,8 +210,8 @@ function Supplies({ s }) {
   };
   const finish = () => {
     const missing = items.filter(i => !v.checked[i]);
-    saveSupplies(target, { ...v, doneEve: forTomorrow ? true : v.doneEve, done: true });
-    if (missing.length) actions.addTask(`לקנות לכריכים: ${missing.join(', ')}`);
+    saveSupplies(target, { ...v, missing, bought: missing.length ? false : v.bought, doneEve: forTomorrow ? true : v.doneEve, done: true })
+      .then(() => actions.suppliesChanged());
     actions.done(s.id, { missing });
   };
   return (
@@ -230,7 +230,7 @@ function Supplies({ s }) {
       </View>
       <Actions>
         <Btn title="סיימתי" icon="check" kind="ok" onPress={finish} />
-        <T v="small" c="sub" style={{ textAlign: 'center' }}>מה שלא סומן נכנס למשימות: "לקנות לכריכים"</T>
+        <T v="small" c="sub" style={{ textAlign: 'center' }}>מה שלא סומן — נכנסת תחנה של קפיצה למכולת</T>
       </Actions>
     </View>
   );
@@ -461,6 +461,36 @@ function Counter({ s }) {
           <Btn title="סיימתי" icon="check" kind="ok" onPress={() => actions.done(s.id, { count: n })} />
         </Actions>
       </View>
+    </View>
+  );
+}
+
+// ───────────── מכולת: לקנות מה שחסר לכריכים ─────────────
+function Shop({ s }) {
+  const { actions, dayKey, tomorrowKey } = useDay();
+  const target = s.target === 'tomorrow' ? tomorrowKey : dayKey;
+  const [v, setV] = useState(null);
+  useEffect(() => { loadSupplies(target).then(x => setV(x || {})); }, [target]);
+  if (!v) return null;
+  const missing = v.missing || [];
+  const got = v.got || {};
+  const toggle = it => { const n = { ...v, got: { ...got, [it]: !got[it] } }; setV(n); saveSupplies(target, n); };
+  const finish = async () => {
+    const left = missing.filter(i => !got[i]);
+    await saveSupplies(target, { ...v, bought: true, leftover: left });
+    if (left.length) actions.addTask(`לא היה במכולת: ${left.join(', ')}`);
+    actions.suppliesChanged();
+    actions.done(s.id, { got, left });
+  };
+  return (
+    <View>
+      <T v="small" c="sub">לקנות:</T>
+      {missing.map(it => <Check key={it} label={it} checked={!!got[it]} onPress={() => toggle(it)} />)}
+      <Actions>
+        {!s.rec?.start && <Btn title="יוצא למכולת" icon="play" kind="gold" onPress={() => actions.start(s.id)} />}
+        <Btn title="חזרתי" icon="check" kind="ok" onPress={finish} />
+        <T v="small" c="sub" style={{ textAlign: 'center' }}>מה שלא סומן — נכנס למשימות</T>
+      </Actions>
     </View>
   );
 }
@@ -846,7 +876,7 @@ function Open({ s }) {
 const MAP = {
   wake: Wake, routine: Routine, text: TextSt, checklist: Checklist, timer: Timer, drive: Drive,
   minyan: Minyan, study: Study, prayer: Prayer, note: Note, camera: Camera, app: AppSt,
-  open: Open, supplies: Supplies, counter: Counter, tasks: Tasks, home: Home, plan: Plan, close: Close, sleep: Sleep, shabbat: Shabbat,
+  open: Open, supplies: Supplies, shop: Shop, counter: Counter, tasks: Tasks, home: Home, plan: Plan, close: Close, sleep: Sleep, shabbat: Shabbat,
 };
 
 export default function StationBody({ s, go }) {

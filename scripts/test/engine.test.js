@@ -331,5 +331,13 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(it2.length === 1 && it2[0].type === 'timer' && it2[0].minutes === 15 && it2[0].title === 'להתקשר לאבא', 'הכתבה — משימה עם זמן');
 }
 
+// מכולת: חסר משהו ולא קנינו — בבוקר לפני הכריכים
+{
+  const q = planDay({ settings: { ...S, shopNeeded: { today: true } }, date: new Date(2026, 9, 21, 6), state: {}, zmanim: z, now: 300 });
+  const ids = q.list.map(x => x.id);
+  ok(ids.indexOf('shop_am') === ids.indexOf('sandwiches') - 1, 'חסר לכריכים — מכולת לפני הכריכים');
+  ok(!find(planDay({ settings: S, date: new Date(2026, 9, 21, 6), state: {}, zmanim: z, now: 300 }), 'shop_am'), 'לא חסר — אין מכולת');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
