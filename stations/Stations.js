@@ -334,7 +334,7 @@ function Minyan({ s }) {
               <View style={{ flex: 1 }}>
                 {!o.reachable ? <T c="sub">כבר לא מספיקים</T> : (
                   <>
-                    <T v="bodyB">{o.studyMinutes > 0 ? `${fmtDur(o.studyMinutes)} ללימוד לפני` : 'מתחילים מיד'}</T>
+                    <T v="bodyB">{o.joinLate > 0 ? `מצטרפים באמצע (${o.joinLate} דק׳ אחרי שהתחיל)` : o.studyMinutes > 0 ? `${fmtDur(o.studyMinutes)} ללימוד לפני` : 'מתחילים מיד'}</T>
                     {o.after && (
                       <T v="small" style={{ color: lateAfter ? t.bad : t.ok }}>
                         {lateAfter ? `לא מספיקים ל${o.after.title} (${toTime(o.after.time)})` : `מספיקים ל${o.after.title} (${toTime(o.after.time)})`}
@@ -352,9 +352,11 @@ function Minyan({ s }) {
       {!opts.length && <T c="sub">לא הוגדרו מניינים — הגדרות ← מניינים</T>}
       {(!opts.some(o => o.ok)) && (() => {
         // ביחידות — האם מספיקים לפני הכולל? (עד 9:15 בערך: קרבנות + שחרית + נסיעה)
-        const sim = planDay({ settings, date: dayDate, state: { ...state, choices: { ...(state.choices || {}), [s.prayer]: 'alone' } }, zmanim, now, noProtect: true });
+        // עם כל הוויתורים (הכנה לכולל מתבטלת וכו׳) — האם שחרית עדיין לפני הכולל?
+        const sim = planDay({ settings, date: dayDate, state: { ...state, choices: { ...(state.choices || {}), [s.prayer]: 'alone' } }, zmanim, now });
         const pi = sim.list.findIndex(x => x.type === 'prayer' && x.prayer === s.prayer);
-        const lateProt = sim.list.slice(pi + 1).find(x => x.protect && x.late > 0.5);
+        const prot = sim.list.findIndex(x => x.protect);
+        const lateProt = prot >= 0 && pi > prot;
         const pr = sim.list[pi];
         return (
           <Btn title={!lateProt ? `ביחידות עכשיו${pr ? ` (${toTime(pr.plannedStart)})` : ''} — מספיקים ל${sim.list.slice(pi + 1).find(x => x.protect)?.title || 'הבא'}` : 'לא מספיקים לפני הכולל — ביחידות אחרי הכולל'}

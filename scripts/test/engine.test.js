@@ -29,7 +29,7 @@ for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive
   st.stations[id] = { status: 'done', start: m, end: m + 8 }; m += 8;
 }
 const opts = evaluateMinyan({ settings: S, date: sun, state: st, zmanim: z, now: m, prayer: 'shacharit' });
-ok(!opts.find(o => o.time === '08:00').reachable, 'מניין 08:00 כבר עבר');
+ok(!opts.find(o => o.time === '07:30').reachable && opts.find(o => o.time === '08:00').reachable, 'מניין 07:30 עבר; 08:00 — מצטרפים באמצע');
 ok(opts.find(o => o.time === '08:30').ok, 'מניין 08:30 — מספיקים לכולל');
 ok(!opts.some(o => o.time === '09:30'), 'ראשון — אין מניין 09:30');
 p = planDay({ settings: S, date: sun, state: { ...st, choices: { shacharit: '08:30' } }, zmanim: z, now: m });
@@ -147,7 +147,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   // מגיעים לבית הכנסת ב-9:01 (כמו היום): מניין 9:15, ההכנה מתבטלת, בכולל ב-10:00
   let st = mk([...before, 'drive_mikveh', 'mikveh', 'drive_shul']);
   let q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('09:01') });
-  ok(!find(q, 'shacharit').anchor && find(q, 'shacharit').plannedStart <= toMin('09:15') && find(q, 'korbanot').plannedStart < toMin('09:05'), 'מגיעים 9:01 — אין מניין: קרבנות מיד ושחרית ביחידות לפני 9:15 (' + toTime(find(q, 'shacharit').plannedStart) + ')');
+  ok(toTime(find(q, 'shacharit').anchor?.start) === '09:00' && find(q, 'shacharit').late < 0.5, 'מגיעים 9:01 — מצטרפים למניין 9:00 באמצע (עד רבע שעה)');
   ok(find(q, 'kollel').late < 0.5 && find(q, 'drive_kollel').late < 0.5, 'מגיעים 9:01 — בכולל ב-10:00 בלי איחור');
   // מגיעים ב-9:20 — אין מניין שמספיק: שחרית ביחידות אחרי הכולל
   q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('09:20') });
@@ -337,6 +337,18 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const ids = q.list.map(x => x.id);
   ok(ids.indexOf('shop_am') === ids.indexOf('sandwiches') - 1, 'חסר לכריכים — מכולת לפני הכריכים');
   ok(!find(planDay({ settings: S, date: new Date(2026, 9, 21, 6), state: {}, zmanim: z, now: 300 }), 'shop_am'), 'לא חסר — אין מכולת');
+}
+
+// מגיעים 8:59 — מניין 9:00 עדיין אפשרי (עד רבע שעה איחור מצטרפים), ובכולל בזמן
+{
+  const day = new Date(2026, 9, 21, 6);
+  const st = { stations: {} };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul']) st.stations[id] = { status: 'done', start: 400, end: 400 };
+  const o = evaluateMinyan({ settings: S, date: day, state: st, zmanim: z, now: toMin('08:59'), prayer: 'shacharit' });
+  const nine = o.find(x => x.time === '09:00');
+  ok(nine.reachable && nine.ok, 'מגיעים 8:59 — מניין 9:00 מותר ומספיקים לכולל');
+  const q = planDay({ settings: S, date: day, state: st, zmanim: z, now: toMin('08:59') });
+  ok(find(q, 'shacharit').anchor && find(q, 'shacharit').late < 0.5 && find(q, 'kollel').late < 0.5, 'מניין 9:00 בלי "איחור", וכולל בזמן');
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
