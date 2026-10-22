@@ -8,6 +8,7 @@ import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Field, Chip, Sheet, Check } from '../components/UI';
 import * as Native from '../lib/native';
 import LockPause from '../components/LockPause';
+import { GROUPS, groupOf } from '../lib/appGroups';
 
 let cache = null;           // רשימת האפליקציות (עם אייקונים) — נטענת פעם אחת
 let freeUntil = {};         // pkg → עד מתי פתוח בלי לשאול שוב
@@ -24,6 +25,8 @@ export default function AppsScreen() {
   const [always, setAlways] = useState(false);
   const [isHome, setIsHome] = useState(true);
   const [err, setErr] = useState(null);
+  const [move, setMove] = useState(null);       // אפליקציה שמעבירים לקבוצה אחרת
+  const [showHidden, setShowHidden] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -49,8 +52,10 @@ export default function AppsScreen() {
     const appPkgs = Object.values(settings.apps || {}).map(a => a.pkg).filter(Boolean);
     const homePkgs = (settings.homeTime?.allowed || []).map(k => settings.apps?.[k]?.pkg).filter(Boolean);
     if (mode === 'night') return new Set(settings.nightLock?.allowed || []);
-    if (mode === 'home') return new Set([...homePkgs, ...(settings.launcher?.homeFree || [])]);
-    return new Set([...appPkgs, ...(settings.launcher?.free || [])]);
+    const bad = settings.launcher?.auto?.bad || [];
+    const ok = list => new Set(list.filter(p => !bad.includes(p)));
+    if (mode === 'home') return ok([...homePkgs, ...(settings.launcher?.homeFree || []), ...(settings.launcher?.auto?.home || [])]);
+    return ok([...appPkgs, ...(settings.launcher?.free || []), ...(settings.launcher?.auto?.free || [])]);
   }, [settings, mode]);
 
   const { lockPausedUntil } = useDay();
@@ -82,14 +87,27 @@ export default function AppsScreen() {
     try { await Share.share({ message: `האפליקציות שלי (${apps.length}):\n` + lines.join('\n') }); } catch {}
   };
 
+  const torahPkgs = useMemo(() => Object.values(settings.apps || {}).map(a => a.pkg).filter(Boolean), [settings.apps]);
+  const gOf = pkg => groupOf(settings, pkg, { torahPkgs });
+  const setGroup = (pkg, g) => {
+    const l = settings.launcher || {};
+    actions.saveSettings({ ...settings, launcher: { ...l, groups: { ...(l.groups || {}), [pkg]: g } } });
+    setMove(null);
+  };
+  const resetGroup = pkg => {
+    const l = settings.launcher || {};
+    const groups = { ...(l.groups || {}) }; delete groups[pkg];
+    actions.saveSettings({ ...settings, launcher: { ...l, groups } });
+    setMove(null);
+  };
+
   const shown = apps.filter(a => !q || a.label.toLowerCase().includes(q.toLowerCase()));
-  const top = shown.filter(a => isFree(a.pkg));
-  const rest = shown.filter(a => !isFree(a.pkg));
+  const byGroup = Object.fromEntries(GROUPS.map(g => [g.k, shown.filter(a => gOf(a.pkg) === g.k)]));
 
   const Grid = ({ list, dim }) => (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
       {list.map(a => (
-        <Pressable key={a.pkg} onPress={() => tap(a)} style={({ pressed }) => ({ width: '25%', alignItems: 'center', paddingVertical: SP.md, opacity: pressed ? 0.5 : dim ? 0.55 : 1 })}>
+        <Pressable key={a.pkg} onPress={() => tap(a)} onLongPress={() => setMove(a)} style={({ pressed }) => ({ width: '25%', alignItems: 'center', paddingVertical: SP.md, opacity: pressed ? 0.5 : dim ? 0.55 : 1 })}>
           {a.icon ? <Image source={{ uri: 'data:image/png;base64,' + a.icon }} style={{ width: 52, height: 52 }} />
             : <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: t.sunk, alignItems: 'center', justifyContent: 'center' }}><T v="bodyB" c="sub">{a.label.slice(0, 1)}</T></View>}
           <T v="tiny" numberOfLines={1} style={{ marginTop: 6, paddingHorizontal: 4, textAlign: 'center' }}>{a.label}</T>
@@ -119,13 +137,25 @@ export default function AppsScreen() {
           </Card>
         )}
         <Field value={q} onChangeText={setQ} placeholder="חיפוש" style={{ marginTop: SP.md }} />
-        {top.length > 0 && <Grid list={top} />}
-        {rest.length > 0 && (
-          <>
-            <T v="tiny" c="sub" style={{ marginTop: SP.lg }}>עם סיבה</T>
-            <Grid list={rest} dim />
-          </>
-        )}
+        {GROUPS.map(g => {
+          const list = byGroup[g.k];
+          if (!list.length) return null;
+          if (g.k === 'hidden' && !showHidden) {
+            return (
+              <Pressable key={g.k} onPress={() => setShowHidden(true)} style={{ marginTop: SP.lg }}>
+                <T v="small" c="sub">{g.label} ({list.length}) — להצגה</T>
+              </Pressable>
+            );
+          }
+          return (
+            <View key={g.k} style={{ marginTop: SP.lg }}>
+              <T v="bodyB">{g.label} <T v="tiny" c="sub">· {list.length}</T></T>
+              <T v="tiny" c="sub">{g.sub}</T>
+              <Grid list={list} dim={g.k === 'bad' || g.k === 'hidden' || (g.k === 'reason' && !list.some(a => isFree(a.pkg)))} />
+            </View>
+          );
+        })}
+        {apps.length > 0 && <T v="tiny" c="sub" style={{ marginTop: SP.lg }}>לחיצה ארוכה על אפליקציה — להעביר אותה לקבוצה אחרת.</T>}
         {!apps.length && !err && <T c="sub" style={{ marginTop: SP.xl }}>טוען…</T>}
         {!!err && <T style={{ marginTop: SP.xl, color: t.warn }}>לא הצלחתי לטעון את האפליקציות: {err}</T>}
       </ScrollView>
@@ -135,11 +165,22 @@ export default function AppsScreen() {
         <View style={{ flexDirection: 'row', gap: SP.sm, marginTop: SP.sm }}>
           {[5, 10, 20, 30].map(m => <Chip key={m} label={`${m} דק׳`} active={mins === m} onPress={() => setMins(m)} />)}
         </View>
-        {mode === 'work' && (
+        {gOf(ask?.pkg) === 'bad' && <T v="small" style={{ marginTop: SP.sm, color: t.warn }}>זו אפליקציה שמבזבזת זמן. בטוח שצריך?</T>}
+        {mode === 'work' && gOf(ask?.pkg) !== 'bad' && (
           <Check label="לפתוח תמיד בלי לשאול (בשעות העבודה)" checked={always} onPress={() => setAlways(!always)} />
         )}
         <T v="small" c="sub" style={{ marginTop: SP.sm }}>נרשם ביומן הטלפון.</T>
         <Btn title="פתח" icon="lock" disabled={!reason.trim()} style={{ marginTop: SP.md }} onPress={confirm} />
+      </Sheet>
+
+      <Sheet visible={!!move} onClose={() => setMove(null)} title={move ? `${move.label} — לאיזו קבוצה?` : ''}>
+        {move && GROUPS.map(g => (
+          <View key={g.k} style={{ marginBottom: SP.sm }}>
+            <Btn kind={gOf(move.pkg) === g.k ? 'primary' : 'line'} small title={g.label} onPress={() => setGroup(move.pkg, g.k)} />
+            <T v="tiny" c="sub" style={{ marginTop: 2 }}>{g.sub}</T>
+          </View>
+        ))}
+        {!!settings.launcher?.groups?.[move?.pkg] && <Btn kind="line" small title="חזרה לברירת המחדל" onPress={() => resetGroup(move.pkg)} />}
       </Sheet>
     </View>
   );
