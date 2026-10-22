@@ -156,7 +156,7 @@ class SederNativeModule : Module() {
         resolved = i.resolveActivity(ctx.packageManager)?.flattenToShortString() ?: ""
         val act = appContext.currentActivity
         try {
-          if (act != null) act.startActivity(i)
+          if (act != null) act.startActivityForResult(i, 7002)
           else ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (e: Exception) { resolved = "שגיאה: " + (e.message ?: e.javaClass.simpleName) }
       }
