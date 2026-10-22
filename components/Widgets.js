@@ -116,7 +116,7 @@ export default function Widgets() {
       <Sheet visible={adding} onClose={() => setAdding(false)} title="איזה וידג׳ט להוסיף?">
         <Field value={q} onChangeText={setQ} placeholder="חיפוש (שם אפליקציה)" />
         <View style={{ marginTop: SP.sm }}>
-          {shown.slice(0, 60).map(p => (
+          {shown.map(p => (
             <View key={p.provider} style={{ paddingVertical: 8 }}>
               <Btn kind="line" small title={`${p.app} — ${p.label}`} onPress={() => pick(p)} />
             </View>

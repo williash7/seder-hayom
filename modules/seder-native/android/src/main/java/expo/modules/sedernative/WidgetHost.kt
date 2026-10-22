@@ -76,7 +76,7 @@ class WidgetView(context: Context, appContext: AppContext) : ExpoView(context, a
     hv = null
     val info = AppWidgetManager.getInstance(context).getAppWidgetInfo(id) ?: return
     WidgetHost.start(context)
-    val v = WidgetHost.get(context).createView(context, id, info)
+    val v = WidgetHost.get(context).createView(context.applicationContext, id, info)
     v.setPadding(0, 0, 0, 0)
     hv = v
     addView(v, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
