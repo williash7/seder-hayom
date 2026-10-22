@@ -68,12 +68,23 @@ export default function Widgets() {
     { text: 'הסר', style: 'destructive', onPress: () => { Native.deleteWidget(id); save(list.filter(w => w.id !== id)); } },
   ]);
 
+  const press = code => { if (!Native.mediaKey(code)) setMsg('כפתורי הנגן דורשים את הגרסה החדשה (APK)'); };
+  const gate = () => { if (!Native.openPackage('com.bluegate.app')) setMsg('PalGate לא נמצא'); };
+
   if (!Native.hasNative) return null;
   const shown = providers.filter(p => !q || (p.app + ' ' + p.label).toLowerCase().includes(q.toLowerCase()));
 
   return (
     <View style={{ marginTop: SP.xl }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <T v="bodyB">קיצורים</T>
+      <T v="tiny" c="sub">הנגן שמתנגן עכשיו (פודקאסט) — בלי לפתוח אותו</T>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginTop: SP.sm }}>
+        <Chip label="⏪ אחורה" onPress={() => press(89)} />
+        <Chip label="⏯ הפעל / עצור" onPress={() => press(85)} />
+        <Chip label="⏩ קדימה" onPress={() => press(90)} />
+        <Chip label="🚪 פתח שער" onPress={gate} />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SP.xl }}>
         <T v="bodyB">וידג׳טים</T>
         <View style={{ flexDirection: 'row', gap: SP.sm }}>
           {list.length > 0 && <Chip label={edit ? 'סיום' : 'עריכה'} active={edit} onPress={() => setEdit(!edit)} />}

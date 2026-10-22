@@ -7,6 +7,8 @@ import android.graphics.Canvas
 import android.util.Base64
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.media.AudioManager
+import android.view.KeyEvent
 import java.io.ByteArrayOutputStream
 import android.content.Context
 import android.content.Intent
@@ -183,6 +185,14 @@ class SederNativeModule : Module() {
     }
     Function("deleteWidget") { id: Int ->
       try { WidgetHost.get(ctx).deleteAppWidgetId(id) } catch (_: Exception) {}
+    }
+
+    // ── שליטה בנגן שמתנגן (פודקאסט וכו') בלי לפתוח אותו: מקשי מדיה למערכת ──
+    Function("mediaKey") { code: Int ->
+      val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+      am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
+      am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+      true
     }
 
     // ── יומן שימוש ──
