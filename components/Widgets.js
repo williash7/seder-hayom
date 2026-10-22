@@ -1,7 +1,7 @@
 // וידג'טים של אפליקציות אחרות, בתוך סדר היום — לא צריך לצאת מהאפליקציה.
 // כפתור בוידג'ט שפועל ברקע (שער, פודקאסט) לא פותח את האפליקציה ולכן לא מפעיל נעילה.
 import { useEffect, useRef, useState } from 'react';
-import { View, AppState, Alert } from 'react-native';
+import { View, Alert } from 'react-native';
 import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Chip, Sheet, Field } from './UI';
@@ -16,25 +16,34 @@ export default function Widgets() {
   const [providers, setProviders] = useState([]);
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState('');
-  const pending = useRef(null);       // { id, h } — ממתין לאישור המערכת
+  const pending = useRef(null);       // טיימר ההמתנה לאישור המערכת
 
-  const save = next => actions.saveSettings({ ...settings, widgets: next });
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const save = next => actions.saveSettings({ ...settingsRef.current, widgets: next });
 
   const finish = (id, h) => {
     const st = Native.widgetState(id);
-    if (!st?.bound) { Native.deleteWidget(id); setMsg('הווידג\'ט לא נוסף'); return; }
+    if (!st?.bound) return false;
     if (st.configure) Native.configureWidget(id);
-    save([...list, { id, h: Math.max(64, h || st.h || 100), half: false }]);
+    save([...(settingsRef.current.widgets || []), { id, h: Math.max(64, h || st.h || 100), half: false }]);
     setMsg('');
+    return true;
   };
 
-  // חזרה מחלון האישור של המערכת
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', s => {
-      if (s === 'active' && pending.current) { const p = pending.current; pending.current = null; finish(p.id, p.h); }
-    });
-    return () => sub.remove();
-  });
+  // ממתינים לאישור של המערכת: בודקים כל חצי שנייה עד שהווידג'ט נקשר (עד שתי דקות).
+  // לא מוחקים בחזרה לאפליקציה — החלון של המערכת יכול לגרום ל"חזרה" לפני שבחרת.
+  const waitBind = (id, h) => {
+    const t0 = Date.now();
+    pending.current = setInterval(() => {
+      if (finish(id, h)) { clearInterval(pending.current); pending.current = null; return; }
+      if (Date.now() - t0 > 120000) {
+        clearInterval(pending.current); pending.current = null;
+        Native.deleteWidget(id); setMsg('המערכת לא אישרה את הווידג\'ט, או שהאישור לא הופיע');
+      }
+    }, 500);
+  };
+  useEffect(() => () => { if (pending.current) clearInterval(pending.current); }, []);
 
   const openAdd = async () => {
     setAdding(true); setMsg('');
@@ -45,8 +54,8 @@ export default function Widgets() {
     setAdding(false);
     const r = Native.allocateWidget(p.provider);
     if (!r) { setMsg('הגרסה המותקנת ישנה — צריך להתקין את ה-APK החדש'); return; }
-    if (r.bound) finish(r.id, p.h);
-    else pending.current = { id: r.id, h: p.h };
+    if (r.bound) { if (!finish(r.id, p.h)) setMsg('הווידג\'ט נקשר אבל לא נטען'); }
+    else { setMsg('ממתין לאישור של המערכת…'); waitBind(r.id, p.h); }
   };
 
   const change = (id, patch) => save(list.map(w => (w.id === id ? { ...w, ...patch } : w)));
