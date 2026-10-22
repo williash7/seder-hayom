@@ -33,13 +33,13 @@ export default function Widgets() {
 
   // ממתינים לאישור של המערכת: בודקים כל חצי שנייה עד שהווידג'ט נקשר (עד שתי דקות).
   // לא מוחקים בחזרה לאפליקציה — החלון של המערכת יכול לגרום ל"חזרה" לפני שבחרת.
-  const waitBind = (id, h) => {
+  const waitBind = (id, h, d = '') => {
     const t0 = Date.now();
     pending.current = setInterval(() => {
       if (finish(id, h)) { clearInterval(pending.current); pending.current = null; return; }
       if (Date.now() - t0 > 120000) {
         clearInterval(pending.current); pending.current = null;
-        Native.deleteWidget(id); setMsg('המערכת לא אישרה את הווידג\'ט, או שהאישור לא הופיע');
+        Native.deleteWidget(id); setMsg('המערכת לא אישרה את הווידג\'ט, או שהאישור לא הופיע' + d);
       }
     }, 500);
   };
@@ -58,7 +58,7 @@ export default function Widgets() {
     if (r.bound) { if (!finish(r.id, p.h)) setMsg('הווידג\'ט נקשר אבל לא נטען'); }
     else {
       const d = r.resolved === undefined ? '' : r.resolved === '' ? ' (לא נמצא חלון אישור במערכת)' : ` (${r.resolved})`;
-      setMsg('ממתין לאישור של המערכת…' + d); waitBind(r.id, p.h);
+      setMsg('ממתין לאישור של המערכת…' + d); waitBind(r.id, p.h, d);
     }
   };
 
