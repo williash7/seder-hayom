@@ -148,16 +148,22 @@ class SederNativeModule : Module() {
       val mgr = AppWidgetManager.getInstance(ctx)
       val id = host.allocateAppWidgetId()
       val ok = mgr.bindAppWidgetIdIfAllowed(id, cn)
+      var resolved = ""
       if (!ok) {
         val i = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
           .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
           .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, cn)
-          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        ctx.startActivity(i)
+        resolved = i.resolveActivity(ctx.packageManager)?.flattenToShortString() ?: ""
+        val act = appContext.currentActivity
+        try {
+          if (act != null) act.startActivity(i)
+          else ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: Exception) { resolved = "שגיאה: " + (e.message ?: e.javaClass.simpleName) }
       }
       val m = HashMap<String, Any>()
       m["id"] = id
       m["bound"] = ok
+      m["resolved"] = resolved
       m
     }
     // האם הווידג'ט נקשר, והאם יש לו מסך הגדרה

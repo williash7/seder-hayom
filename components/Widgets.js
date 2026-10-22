@@ -52,10 +52,14 @@ export default function Widgets() {
 
   const pick = p => {
     setAdding(false);
+    Native.unlockFor(3);          // שהנעילה לא תחסום את חלון האישור של המערכת
     const r = Native.allocateWidget(p.provider);
     if (!r) { setMsg('הגרסה המותקנת ישנה — צריך להתקין את ה-APK החדש'); return; }
     if (r.bound) { if (!finish(r.id, p.h)) setMsg('הווידג\'ט נקשר אבל לא נטען'); }
-    else { setMsg('ממתין לאישור של המערכת…'); waitBind(r.id, p.h); }
+    else {
+      const d = r.resolved === undefined ? '' : r.resolved === '' ? ' (לא נמצא חלון אישור במערכת)' : ` (${r.resolved})`;
+      setMsg('ממתין לאישור של המערכת…' + d); waitBind(r.id, p.h);
+    }
   };
 
   const change = (id, patch) => save(list.map(w => (w.id === id ? { ...w, ...patch } : w)));
@@ -77,6 +81,7 @@ export default function Widgets() {
         </View>
       </View>
       {!!msg && <T v="small" style={{ marginTop: SP.sm, color: t.warn }}>{msg}</T>}
+      {!!pending.current && <Chip label="ביטול" onPress={() => { clearInterval(pending.current); pending.current = null; setMsg(''); }} />}
       {list.length === 0 && <T v="small" c="sub" style={{ marginTop: SP.sm }}>אפשר להוסיף כאן וידג׳טים של אפליקציות אחרות — בנק, שער, פודקאסט — ולהשתמש בהם בלי לצאת מסדר היום.</T>}
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: SP.sm }}>
