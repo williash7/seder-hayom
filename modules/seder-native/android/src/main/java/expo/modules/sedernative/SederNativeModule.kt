@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.util.Base64
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import java.io.ByteArrayOutputStream
 import android.content.Context
 import android.content.Intent
@@ -112,6 +114,69 @@ class SederNativeModule : Module() {
         }
         m
       }.sortedBy { (it["label"] as String).lowercase() }
+    }
+
+    // ── וידג'טים של אפליקציות אחרות (מוצגים בתוך סדר היום) ──
+    OnActivityEntersForeground { WidgetHost.start(ctx) }
+    OnActivityEntersBackground { WidgetHost.stop(ctx) }
+
+    View(WidgetView::class) {
+      Prop("widgetId") { view: WidgetView, id: Int -> view.setWidget(id) }
+    }
+
+    // כל הווידג'טים שהותקנו בטלפון: { provider, label, app, w, h, configure }
+    AsyncFunction("listWidgetProviders") {
+      val pm = ctx.packageManager
+      val d = ctx.resources.displayMetrics.density
+      AppWidgetManager.getInstance(ctx).installedProviders.map { p ->
+        val m = HashMap<String, Any>()
+        m["provider"] = p.provider.flattenToString()
+        m["label"] = try { p.loadLabel(pm) ?: p.provider.shortClassName } catch (_: Exception) { p.provider.shortClassName }
+        m["app"] = try { pm.getApplicationLabel(pm.getApplicationInfo(p.provider.packageName, 0)).toString() } catch (_: Exception) { p.provider.packageName }
+        m["pkg"] = p.provider.packageName
+        m["w"] = Math.round(p.minWidth / d)
+        m["h"] = Math.round(p.minHeight / d)
+        m["configure"] = p.configure != null
+        m
+      }.sortedWith(compareBy({ (it["app"] as String).lowercase() }, { (it["label"] as String).lowercase() }))
+    }
+
+    // שלב 1: מקצה מזהה ומנסה לקשור. אם צריך אישור — נפתח חלון אישור של המערכת
+    Function("allocateWidget") { provider: String ->
+      val cn = ComponentName.unflattenFromString(provider)!!
+      val host = WidgetHost.get(ctx)
+      val mgr = AppWidgetManager.getInstance(ctx)
+      val id = host.allocateAppWidgetId()
+      val ok = mgr.bindAppWidgetIdIfAllowed(id, cn)
+      if (!ok) {
+        val i = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
+          .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+          .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, cn)
+          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        ctx.startActivity(i)
+      }
+      val m = HashMap<String, Any>()
+      m["id"] = id
+      m["bound"] = ok
+      m
+    }
+    // האם הווידג'ט נקשר, והאם יש לו מסך הגדרה
+    Function("widgetState") { id: Int ->
+      val info = AppWidgetManager.getInstance(ctx).getAppWidgetInfo(id)
+      val m = HashMap<String, Any>()
+      m["bound"] = info != null
+      m["configure"] = info?.configure != null
+      m["h"] = if (info != null) Math.round(info.minHeight / ctx.resources.displayMetrics.density) else 0
+      m
+    }
+    Function("configureWidget") { id: Int ->
+      val act = appContext.currentActivity
+      if (act != null) {
+        try { WidgetHost.get(ctx).startAppWidgetConfigureActivityForResult(act, id, 0, 7001, null) } catch (_: Exception) {}
+      }
+    }
+    Function("deleteWidget") { id: Int ->
+      try { WidgetHost.get(ctx).deleteAppWidgetId(id) } catch (_: Exception) {}
     }
 
     // ── יומן שימוש ──

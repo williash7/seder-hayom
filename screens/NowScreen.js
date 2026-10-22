@@ -11,6 +11,7 @@ import * as Native from '../lib/native';
 import LockPause from '../components/LockPause';
 import PlanChange from '../components/PlanChange';
 import CatchUp from '../components/CatchUp';
+import Widgets from '../components/Widgets';
 import Icon from '../components/Icon';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
@@ -52,6 +53,7 @@ export default function NowScreen({ go }) {
       keyboardShouldPersistTaps="handled">
       {header}
       {body}
+      <Widgets />
     </ScrollView>
     <BlockedSheet />
   </>);

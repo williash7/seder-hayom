@@ -70,7 +70,7 @@
       ]
     ],
     "extra": {
-      "releaseName": "0.6",
+      "releaseName": "0.7",
       "eas": {
         "projectId": "5f28778a-e203-4c61-91e7-bfcdfd204462"
       }
@@ -85,6 +85,6 @@
         "expo-channel-name": "preview"
       }
     },
-    "runtimeVersion": "r2"
+    "runtimeVersion": "r3"
   }
 }
