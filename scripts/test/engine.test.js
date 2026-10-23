@@ -369,5 +369,16 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(find(q, 'shacharit').status !== 'dropped' && find(q, 'drive_shul').late < 0.5, 'תפילה ונסיעות לא נזרקו');
 }
 
+// שישי 9:53, נסיעות ארוכות: איסוף מענדלה בזמן — מקצרים קרבנות, מוותרים על מקווה, מתפללים בבית ביחידות
+{
+  const S2 = JSON.parse(JSON.stringify(S));
+  S2.places.tzivia.minutes = 21; S2.places.mendele.minutes = 6; S2.places.gan.minutes = 14;
+  const st = { stations: {}, choices: {} };
+  for (const id of ['wake', 'morning', 'shopping', 'sandwiches']) st.stations[id] = { status: 'done', start: 540, end: 592 };
+  const q = planDay({ settings: S2, date: new Date(2026, 9, 23, 6), state: st, zmanim: z, now: toMin('09:53') });
+  ok(find(q, 'fri_mendele').late < 0.5 && find(q, 'fri_girls').late < 0.5, 'שישי עמוס — איסוף מענדלה והבנות בלי איחור');
+  ok(find(q, 'shacharit').plannedStart < find(q, 'fri_pick1').plannedStart, 'השחרית נשארת לפני האיסוף (לא נדחית)');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
