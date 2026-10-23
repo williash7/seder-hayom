@@ -361,5 +361,13 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(q.current?.id !== 'study_am' && find(q, 'study_am').status === 'auto', 'שחרית סומנה — הלימוד שלפניה עבר (עכשיו: ' + q.current?.title + ')');
 }
 
+// שישי, מאחרים בבוקר — איסוף מענדלה (11:45) קבוע: לא מאחרים, ומוותרים על תחנות פחות חשובות
+{
+  const day = new Date(2026, 9, 23, 6);
+  const q = planDay({ settings: S, date: day, state: { stations: {} }, zmanim: z, now: toMin('09:48') });
+  ok(find(q, 'fri_mendele').late < 0.5, 'איסוף מענדלה בשישי — בלי איחור (איחור: ' + Math.round(find(q, 'fri_mendele').late) + ')');
+  ok(find(q, 'shacharit').status !== 'dropped' && find(q, 'drive_shul').late < 0.5, 'תפילה ונסיעות לא נזרקו');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
