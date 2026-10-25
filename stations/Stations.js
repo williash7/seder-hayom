@@ -75,6 +75,35 @@ function Wake({ s }) {
 }
 
 // ───────────── שגרה עם טיימר לכל שלב ─────────────
+// עריכת שלבי שגרה ליום הזה בלבד (למשל כריכים — "היום הם רוצים משהו אחר")
+function StepsEditor({ s, onClose }) {
+  const { actions } = useDay();
+  const [rows, setRows] = useState((s.steps || []).map(x => ({ ...x, minutes: String(x.minutes ?? '') })));
+  const upd = (i, patch) => setRows(l => l.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const add = () => setRows(l => [...l, { id: 'n_' + Date.now() + '_' + l.length, label: '', minutes: String(s.perItem || 4) }]);
+  const save = () => {
+    const steps = rows.filter(x => x.label.trim()).map(x => ({ ...x, label: x.label.trim(), minutes: Math.max(0, Number(x.minutes) || 0) }));
+    actions.setOverride(s.id, { steps });
+    onClose();
+  };
+  const reset = () => { actions.setOverride(s.id, null); onClose(); };
+  return (
+    <Sheet visible onClose={onClose} title={`${s.title} — לערוך להיום`}>
+      <T v="small" c="sub" style={{ marginBottom: SP.sm }}>השינוי חל על היום בלבד. לשינוי קבוע — בהגדרות.</T>
+      {rows.map((x, i) => (
+        <View key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm, marginBottom: SP.sm }}>
+          <Field value={x.label} onChangeText={v => upd(i, { label: v })} placeholder="מה לעשות" style={{ flex: 1 }} />
+          <Field value={x.minutes} onChangeText={v => upd(i, { minutes: v.replace(/[^0-9]/g, '') })} keyboardType="numeric" style={{ width: 56, textAlign: 'center' }} />
+          <Pressable onPress={() => setRows(l => l.filter((_, j) => j !== i))} hitSlop={8}><Icon name="x" size={18} color="#999" /></Pressable>
+        </View>
+      ))}
+      <Btn title="+ להוסיף" kind="line" small onPress={add} style={{ alignSelf: 'flex-start', marginTop: SP.xs }} />
+      <Btn title="לשמור להיום" icon="check" onPress={save} style={{ marginTop: SP.lg }} />
+      {s.overridden && <Btn title="חזרה לרגיל" kind="line" small onPress={reset} style={{ marginTop: SP.sm }} />}
+    </Sheet>
+  );
+}
+
 function Routine({ s }) {
   const { actions } = useDay();
   const t = useT();
@@ -82,6 +111,13 @@ function Routine({ s }) {
   const data = s.rec?.data || {};
   const marks = data.steps || {};
   const steps = s.steps || [];
+  const [editing, setEditing] = useState(false);
+  const canEdit = !!s.menu || !!s.overridden;
+  const editBtn = canEdit ? (
+    <Pressable onPress={() => setEditing(true)} style={{ alignSelf: 'flex-start', paddingVertical: 6, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+      <Icon name="edit" size={14} color={t.gold} /><T v="small" style={{ color: t.gold, fontWeight: '700' }}>לערוך להיום</T>
+    </Pressable>
+  ) : null;
   const curIdx = steps.findIndex(x => !marks[x.id]);
   const cur = steps[curIdx];
   const started = s.rec?.start != null;
@@ -98,6 +134,8 @@ function Routine({ s }) {
   if (!started) {
     return (
       <View>
+        {editBtn}
+        {editing && <StepsEditor s={s} onClose={() => setEditing(false)} />}
         {steps.map(x => (
           <View key={x.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
             <T>{x.label}</T><T c="sub" v="small">{x.minutes} דק׳</T>
@@ -110,6 +148,8 @@ function Routine({ s }) {
 
   return (
     <View>
+      {editBtn}
+      {editing && <StepsEditor s={s} onClose={() => setEditing(false)} />}
       {cur && (
         <Card tone="gold" style={{ alignItems: 'center', marginBottom: SP.lg }}>
           <T v="tiny" c="sub">עכשיו · {curIdx + 1} מתוך {steps.length}</T>

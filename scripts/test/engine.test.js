@@ -380,5 +380,15 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(find(q, 'shacharit').plannedStart < find(q, 'fri_pick1').plannedStart, 'השחרית נשארת לפני האיסוף (לא נדחית)');
 }
 
+// עריכת הכריכים ליום הזה — שלבים שנערכו מחליפים את התפריט, והמשך מתעדכן
+{
+  const day = new Date(2026, 9, 25, 6);
+  const base = planDay({ settings: S, date: day, state: { stations: {} }, zmanim: z, now: toMin('07:34') });
+  const steps = [{ id: 'm_מענדלה_0', label: 'מענדלה — טוסט', minutes: 5 }, { id: 'n_1', label: 'מוסיא — פיתה', minutes: 4 }];
+  const q = planDay({ settings: S, date: day, state: { stations: {}, overrides: { sandwiches: { steps } } }, zmanim: z, now: toMin('07:34') });
+  ok(find(q, 'sandwiches').steps.length === 2 && find(q, 'sandwiches').steps[1].label === 'מוסיא — פיתה' && find(q, 'sandwiches').overridden, 'כריכים: השלבים שנערכו ליום מחליפים את התפריט');
+  ok(find(q, 'sandwiches').plannedEnd - find(q, 'sandwiches').plannedStart === 9 && find(base, 'sandwiches').steps.length > 2, 'המשך הכריכים מתעדכן לפי השלבים החדשים');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');
