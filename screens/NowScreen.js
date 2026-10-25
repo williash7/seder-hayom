@@ -53,7 +53,7 @@ export default function NowScreen({ go }) {
 
   const wrap = body => (<>
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }}
-      contentContainerStyle={{ padding: SP.xl, paddingTop: ins.top + SP.lg, paddingBottom: 200 }}
+      contentContainerStyle={{ padding: SP.xl, paddingTop: ins.top + SP.lg, paddingBottom: layoutOf(settings).hidden.includes('dock') ? 120 : 24 }}
       keyboardShouldPersistTaps="handled">
       {header}
       {body}

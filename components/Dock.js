@@ -34,7 +34,7 @@ export default function Dock() {
 
   return (
     <>
-      <View style={{ position: 'absolute', left: 16, right: 16, bottom: ins.bottom + 12 + 62, backgroundColor: t.surface, borderRadius: R.xl,
+      <View style={{ marginHorizontal: 16, marginBottom: ins.bottom + 12 + 62 + 8, marginTop: 6, backgroundColor: t.surface, borderRadius: R.xl,
         flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingVertical: 8, borderWidth: 1, borderColor: t.hair }}>
         {pins.map(p => (
           <Pressable key={p} onPress={() => { if (!Native.openPackage(p)) setEdit(true); }} onLongPress={() => setEdit(true)}
