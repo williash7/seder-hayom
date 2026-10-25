@@ -390,5 +390,24 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(find(q, 'sandwiches').plannedEnd - find(q, 'sandwiches').plannedStart === 9 && find(base, 'sandwiches').steps.length > 2, 'המשך הכריכים מתעדכן לפי השלבים החדשים');
 }
 
+// שינוי בתוכנית: נסיעה/טיול במשך חופשי (לא יודע מתי אגיע) + שעה לשלב + דילוג עד תחנה
+{
+  const day = new Date(2026, 9, 25, 6);
+  const st0 = { stations: {} };
+  const base = planDay({ settings: S, date: day, state: st0, zmanim: z, now: toMin('09:18') });
+  const cur = base.current.id;
+  const extras = [
+    { id: 'x1', type: 'drive', title: 'לטיול', icon: 'car', legs: ['home'], driveMinutes: 90, batch: 'b', beforeId: cur },
+    { id: 'x2', type: 'timer', title: 'ארוחה', icon: 'clock', minutes: 30, at: '14:00', batch: 'b', beforeId: cur },
+  ];
+  const q = planDay({ settings: S, date: day, state: { stations: {}, extras }, zmanim: z, now: toMin('09:18') });
+  const x1 = find(q, 'x1'), x2 = find(q, 'x2');
+  ok(Math.round(x1.plannedEnd - x1.plannedStart) === 90, 'טיול במשך חופשי: 90 דק׳ (' + Math.round(x1.plannedEnd - x1.plannedStart) + ')');
+  ok(x2.plannedStart >= toMin('14:00') - 0.5 && x2.late < 0.5, 'שלב עם שעה קבועה מתחיל ב-14:00');
+  const next = base.list.find(x => !x.extra && x.id !== cur && !['done', 'skipped', 'auto'].includes(x.status));
+  const q2 = planDay({ settings: S, date: day, state: { stations: {}, extras, overrides: { [next.id]: { off: true } } }, zmanim: z, now: toMin('09:18') });
+  ok(!q2.list.some(x => x.id === next.id), 'דילוג עד תחנה: התחנות שבדרך יוצאות מהיום');
+}
+
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
 console.log('\nכל הבדיקות עברו');

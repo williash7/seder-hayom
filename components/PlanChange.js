@@ -7,7 +7,7 @@ import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Field, Chip, Sheet, Card } from './UI';
 import Icon from './Icon';
-import { fmtDur, toMin } from '../lib/time';
+import { fmtDur, toMin, toTime } from '../lib/time';
 import { parsePlan } from '../lib/parsePlan';
 
 const HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/;
@@ -20,10 +20,22 @@ const KINDS = [
   { k: 'timer', label: 'טיימר', icon: 'play' },
 ];
 const MINS = [5, 10, 15, 20, 30, 45, 60, 90];
+// משך חופשי: "75" דקות, "1:30", "1.5" שעות, "שעתיים"
+const parseFree = str => {
+  const x = String(str || '').trim();
+  if (!x) return null;
+  let m = /^(\d{1,2}):(\d{1,2})$/.exec(x);
+  if (m) return Number(m[1]) * 60 + Number(m[2]);
+  m = /^(\d+)\s*$/.exec(x);
+  if (m) return Number(m[1]);
+  m = /^(\d+(?:\.\d+)?)\s*(?:ש|שעות|שעה)$/.exec(x);
+  if (m) return Math.round(Number(m[1]) * 60);
+  return null;
+};
 
 export default function PlanChange() {
   const t = useT();
-  const { settings, actions } = useDay();
+  const { settings, actions, plan } = useDay();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [newPlaces, setNewPlaces] = useState({});
@@ -33,6 +45,7 @@ export default function PlanChange() {
   const [atTime, setAtTime] = useState('');
   const [saveName, setSaveName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [resume, setResume] = useState(null);   // תחנה קבועה שממנה ממשיכים אחרי הרצף (null = ממשיכים כרגיל)
   const seqs = settings.sequences || [];
 
   const build = () => {
@@ -49,41 +62,51 @@ export default function PlanChange() {
   const delSeq = id => actions.saveSettings({ ...settings, sequences: seqs.filter(x => x.id !== id) });
 
   const places = { ...(settings.places || {}), ...newPlaces };
-  const start = k => setEdit({ k, title: '', minutes: k === 'study' ? 30 : k === 'stay' ? 20 : 10, place: null, name: '', address: '', drive: 10 });
+  const start = k => setEdit({ k, title: '', minutes: k === 'study' ? 30 : k === 'stay' ? 20 : 10, free: '', time: '', place: null, name: '', address: '', drive: 10, driveFree: '' });
 
   const addItem = () => {
     const e = edit;
+    const free = parseFree(e.free);
+    const mins = free ?? e.minutes;
+    if (e.time.trim() && !HHMM.test(e.time.trim())) return;
+    const at = e.time.trim() ? e.time.trim().padStart(5, '0') : null;
+    const extra = at ? { at } : {};
     if (e.k === 'drive') {
       let id = e.place;
+      const dFree = parseFree(e.driveFree);
       if (!id) {
         if (!e.name.trim() || !e.address.trim()) return;
         id = 'p_' + Date.now();
         setNewPlaces(p => ({ ...p, [id]: { name: e.name.trim(), address: e.address.trim(), minutes: Number(e.drive) || 10 } }));
       }
       const name = e.place ? places[id]?.name : e.name.trim();
-      setItems(l => [...l, { type: 'drive', title: `ל${name}`, icon: 'car', legs: [id] }]);
+      setItems(l => [...l, { type: 'drive', title: `ל${name}`, icon: 'car', legs: [id], ...(dFree != null ? { driveMinutes: dFree } : {}), ...(at ? { arriveBy: at } : {}) }]);
     } else if (e.k === 'stay') {
       const where = [...items].reverse().find(x => x.type === 'drive');
-      setItems(l => [...l, { type: 'timer', title: e.title.trim() || (where ? `${where.title.slice(1)}` : 'להיות שם'), icon: 'clock', minutes: e.minutes }]);
+      setItems(l => [...l, { type: 'timer', title: e.title.trim() || (where ? `${where.title.slice(1)}` : 'להיות שם'), icon: 'clock', minutes: mins, ...extra }]);
     } else if (e.k === 'study') {
-      setItems(l => [...l, { type: 'study', title: e.title.trim() || 'זמן לימוד', icon: 'book', appKey: 'limud', path: 'index.html?go=1&until={end}', minutes: e.minutes }]);
+      setItems(l => [...l, { type: 'study', title: e.title.trim() || 'זמן לימוד', icon: 'book', appKey: 'limud', path: 'index.html?go=1&until={end}', minutes: mins, ...extra }]);
     } else if (e.k === 'task') {
       if (!e.title.trim()) return;
-      setItems(l => [...l, { type: 'timer', title: e.title.trim(), icon: 'list', minutes: e.minutes }]);
+      setItems(l => [...l, { type: 'timer', title: e.title.trim(), icon: 'list', minutes: mins, ...extra }]);
     } else {
-      setItems(l => [...l, { type: 'timer', title: e.title.trim() || 'טיימר', icon: 'play', minutes: e.minutes }]);
+      setItems(l => [...l, { type: 'timer', title: e.title.trim() || 'טיימר', icon: 'play', minutes: mins, ...extra }]);
     }
     setEdit(null);
   };
 
+  // תחנות קבועות שנשארו להיום — אפשר לבחור שמהן ממשיכים אחרי הרצף
+  const upcoming = (plan?.list || []).filter(x => !x.extra && !['done', 'skipped', 'auto'].includes(x.status) && !x.dropped && !['wake', 'sleep', 'close'].includes(x.type)).slice(0, 12);
+  const skipIds = resume ? upcoming.slice(0, Math.max(0, upcoming.findIndex(x => x.id === resume))).map(x => x.id) : [];
+
   const commit = () => {
     if (!items.length) return;
     if (when === 'at' && !HHMM.test(atTime)) return;
-    actions.addExtras(items, newPlaces, when === 'at' ? atTime.padStart(5, '0') : null);
-    setItems([]); setNewPlaces({}); setEdit(null); setOpen(false); setWhen('now'); setAtTime('');
+    actions.addExtras(items, newPlaces, when === 'at' ? atTime.padStart(5, '0') : null, null, skipIds);
+    setResume(null); setItems([]); setNewPlaces({}); setEdit(null); setOpen(false); setWhen('now'); setAtTime('');
   };
   const close = () => { setOpen(false); setEdit(null); };
-  const total = items.reduce((a, x) => a + (x.type === 'drive' ? (Number(places[x.legs[0]]?.minutes) || 10) : x.minutes || 0), 0);
+  const total = items.reduce((a, x) => a + (x.type === 'drive' ? (Number(x.driveMinutes ?? places[x.legs[0]]?.minutes) || 10) : x.minutes || 0), 0);
 
   return (
     <>
@@ -99,7 +122,7 @@ export default function PlanChange() {
               <T v="small" c="sub" style={{ width: 18 }}>{i + 1}</T>
               <Icon name={x.icon} size={18} color={t.sub} />
               <T v="bodyB" style={{ flex: 1 }}>{x.title}</T>
-              <T v="small" c="sub">{x.type === 'drive' ? `~${places[x.legs[0]]?.minutes || 10} דק׳` : fmtDur(x.minutes)}</T>
+              <T v="small" c="sub">{x.at || x.arriveBy ? `${x.at || x.arriveBy} · ` : ''}{x.type === 'drive' ? `~${x.driveMinutes ?? places[x.legs[0]]?.minutes ?? 10} דק׳` : fmtDur(x.minutes)}</T>
               <Pressable onPress={() => setItems(l => l.filter((_, j) => j !== i))} hitSlop={8}><Icon name="x" size={16} color={t.faint} /></Pressable>
             </View>
           ))}
@@ -130,6 +153,12 @@ export default function PlanChange() {
               </View>
               {items.length > 0 && (
                 <>
+                  <T v="small" c="sub" style={{ marginTop: SP.lg }}>אחרי זה — איך ממשיכים?</T>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                    <Chip label="כרגיל — מה שהיה מתוכנן" active={!resume} onPress={() => setResume(null)} />
+                    {upcoming.map(x => <Chip key={x.id} label={`מ${x.title} (${toTime(Math.round(x.plannedStart))})`} active={resume === x.id} onPress={() => setResume(x.id)} />)}
+                  </View>
+                  {resume && skipIds.length > 0 && <T v="tiny" c="sub" style={{ marginTop: 4 }}>יידלגו להיום: {upcoming.filter(x => skipIds.includes(x.id)).map(x => x.title).join(' · ')}</T>}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginTop: SP.lg, alignItems: 'center' }}>
                     <T v="small" c="sub">מתי?</T>
                     <Chip label="עכשיו" active={when === 'now'} onPress={() => setWhen('now')} />
@@ -170,10 +199,13 @@ export default function PlanChange() {
                       <Field value={edit.address} onChangeText={v => setEdit({ ...edit, address: v })} placeholder="כתובת לוויז" style={{ marginTop: SP.sm }} />
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SP.sm }}>
                         <T v="small" c="sub" style={{ alignSelf: 'center' }}>נסיעה של</T>
-                        {[5, 10, 15, 20, 30].map(m => <Chip key={m} label={`${m} דק׳`} active={edit.drive === m} onPress={() => setEdit({ ...edit, drive: m })} />)}
+                        {[5, 10, 15, 20, 30].map(m => <Chip key={m} label={`${m} דק׳`} active={edit.drive === m && !edit.driveFree} onPress={() => setEdit({ ...edit, drive: m, driveFree: '' })} />)}
                       </View>
                     </>
                   )}
+                  <Field value={edit.driveFree} onChangeText={v => setEdit({ ...edit, driveFree: v })} keyboardType="numbers-and-punctuation"
+                    placeholder="זמן נסיעה/טיול משוער — דקות או 1:30 (לא חובה)" style={{ marginTop: SP.sm }} />
+                  <T v="tiny" c="sub" style={{ marginTop: 4 }}>לא יודע מתי תגיע? כשתגיע ליעד (זיהוי מיקום) השלב הבא יתחיל לבד, מוקדם או מאוחר מהמשוער.</T>
                 </>
               ) : (
                 <>
@@ -181,11 +213,15 @@ export default function PlanChange() {
                     placeholder={edit.k === 'task' ? 'מה צריך לעשות?' : edit.k === 'study' ? 'מה לומדים? (לא חובה)' : edit.k === 'stay' ? 'מה עושים שם? (לא חובה)' : 'שם (לא חובה)'}
                     style={{ marginTop: SP.sm }} />
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SP.sm }}>
-                    {MINS.map(m => <Chip key={m} label={fmtDur(m)} active={edit.minutes === m} onPress={() => setEdit({ ...edit, minutes: m })} />)}
+                    {MINS.map(m => <Chip key={m} label={fmtDur(m)} active={edit.minutes === m && !edit.free} onPress={() => setEdit({ ...edit, minutes: m, free: '' })} />)}
                   </View>
+                  <Field value={edit.free} onChangeText={v => setEdit({ ...edit, free: v })} keyboardType="numbers-and-punctuation"
+                    placeholder="או משך חופשי — דקות או 1:30" style={{ marginTop: SP.sm }} />
                   {edit.k === 'study' && <T v="small" c="sub" style={{ marginTop: SP.sm }}>נפתח באפליקציית הלימוד, עד סוף הזמן.</T>}
                 </>
               )}
+              <Field value={edit.time} onChangeText={v => setEdit({ ...edit, time: v })} keyboardType="numbers-and-punctuation"
+                placeholder={edit.k === 'drive' ? 'להגיע עד שעה (לא חובה) — 17:00' : 'להתחיל בשעה (לא חובה) — 17:00'} style={{ marginTop: SP.sm }} />
               <View style={{ flexDirection: 'row', gap: SP.sm, marginTop: SP.md }}>
                 <Btn title="להוסיף לרצף" icon="plus" kind="primary" small onPress={addItem} />
                 <Btn title="ביטול" kind="ghost" small onPress={() => setEdit(null)} />
