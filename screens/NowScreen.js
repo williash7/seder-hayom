@@ -125,6 +125,18 @@ export default function NowScreen({ go }) {
         )}
       </View>
 
+      {over && s.type !== 'open' && s.type !== 'wake' && (
+        <View style={{ marginTop: SP.lg, alignItems: 'center' }}>
+          <T v="small" c="sub">להוסיף זמן?</T>
+          <View style={{ flexDirection: 'row', gap: SP.sm, marginTop: 6 }}>
+            {[5, 10, 15, 30].map(m => (
+              <Chip key={m} label={`+${m} דק׳`} onPress={() =>
+                actions.setOverride(s.id, { addMin: (Number(s.addMin) || 0) + Math.ceil(-remainSec / 60) + m })} />
+            ))}
+          </View>
+        </View>
+      )}
+
       <View style={{ marginTop: SP.xl }}>
         <StationBody s={s} go={go} />
       </View>
