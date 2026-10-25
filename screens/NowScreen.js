@@ -13,6 +13,9 @@ import PlanChange from '../components/PlanChange';
 import CatchUp from '../components/CatchUp';
 import Widgets from '../components/Widgets';
 import Dock from '../components/Dock';
+import Shortcuts from '../components/Shortcuts';
+import HomeEdit from '../components/HomeEdit';
+import { layoutOf } from '../lib/homeLayout';
 import Icon from '../components/Icon';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
@@ -54,9 +57,10 @@ export default function NowScreen({ go }) {
       keyboardShouldPersistTaps="handled">
       {header}
       {body}
-      <Widgets />
+      {layoutOf(settings).order.filter(k => !layoutOf(settings).hidden.includes(k)).map(k => (k === 'shortcuts' ? <Shortcuts key={k} /> : k === 'widgets' ? <Widgets key={k} /> : null))}
+      <HomeEdit />
     </ScrollView>
-    <Dock />
+    {!layoutOf(settings).hidden.includes('dock') && <Dock />}
     <BlockedSheet />
   </>);
 

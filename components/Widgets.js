@@ -62,29 +62,25 @@ export default function Widgets() {
     }
   };
 
+  const moveW = (id, d) => {
+    const i = list.findIndex(w => w.id === id), j = i + d;
+    if (j < 0 || j >= list.length) return;
+    const next = [...list]; [next[i], next[j]] = [next[j], next[i]];
+    save(next);
+  };
   const change = (id, patch) => save(list.map(w => (w.id === id ? { ...w, ...patch } : w)));
   const remove = id => Alert.alert('להסיר את הווידג\'ט?', '', [
     { text: 'ביטול', style: 'cancel' },
     { text: 'הסר', style: 'destructive', onPress: () => { Native.deleteWidget(id); save(list.filter(w => w.id !== id)); } },
   ]);
 
-  const press = code => { if (!Native.mediaKey(code)) setMsg('כפתורי הנגן דורשים את הגרסה החדשה (APK)'); };
-  const gate = () => { if (!Native.openPackage('com.bluegate.app')) setMsg('PalGate לא נמצא'); };
 
   if (!Native.hasNative) return null;
   const shown = providers.filter(p => !q || (p.app + ' ' + p.label).toLowerCase().includes(q.toLowerCase()));
 
   return (
     <View style={{ marginTop: SP.xl }}>
-      <T v="bodyB">קיצורים</T>
-      <T v="tiny" c="sub">הנגן שמתנגן עכשיו (פודקאסט) — בלי לפתוח אותו</T>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginTop: SP.sm }}>
-        <Chip label="⏪ אחורה" onPress={() => press(89)} />
-        <Chip label="⏯ הפעל / עצור" onPress={() => press(85)} />
-        <Chip label="⏩ קדימה" onPress={() => press(90)} />
-        <Chip label="🚪 פתח שער" onPress={gate} />
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SP.xl }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <T v="bodyB">וידג׳טים</T>
         <View style={{ flexDirection: 'row', gap: SP.sm }}>
           {list.length > 0 && <Chip label={edit ? 'סיום' : 'עריכה'} active={edit} onPress={() => setEdit(!edit)} />}
@@ -103,6 +99,8 @@ export default function Widgets() {
                 <Chip label="גדול" onPress={() => change(w.id, { h: w.h + 40 })} />
                 <Chip label="קטן" onPress={() => change(w.id, { h: Math.max(48, w.h - 40) })} />
                 <Chip label={w.half ? 'רוחב מלא' : 'חצי רוחב'} onPress={() => change(w.id, { half: !w.half })} />
+                <Chip label="↑" onPress={() => moveW(w.id, -1)} />
+                <Chip label="↓" onPress={() => moveW(w.id, 1)} />
                 <Chip label="הסר" tone="warn" onPress={() => remove(w.id)} />
               </View>
             )}
