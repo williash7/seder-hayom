@@ -412,11 +412,14 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 // ── יום הטיסה (3.11): אחורה מההמראה ב-11:30 ──
 {
   const fly = new Date('2026-11-03T04:00:00');
-  const q = planDay({ settings: S, date: fly, state: {}, zmanim: z, now: toMin('05:00') });
+  const q = planDay({ settings: S, date: fly, state: {}, zmanim: z, now: toMin('04:00') });
   const t = id => { const x = find(q, id); return x ? toTime(x.plannedStart) : '—'; };
-  ok(!!find(q, 'wake') && t('wake') === '05:15', 'יום הטיסה: השכמה ב-05:15 (' + t('wake') + ')');
-  ok(t('drive_airport') === '07:00' && Math.round(find(q, 'drive_airport').late) === 0, 'יוצאים לשדה ב-07:00 ולא מאחרים (' + t('drive_airport') + ')');
-  ok(t('airport_checkin') === '08:30', 'בנמל התעופה ב-08:30 (' + t('airport_checkin') + ')');
+  ok(t('wake') === '04:35', 'יום הטיסה: השכמה ב-04:35 (' + t('wake') + ')');
+  ok(t('mikveh') === '05:10', 'מקווה ב-05:10 (' + t('mikveh') + ')');
+  ok(t('drive_station') === '05:45' && toTime(find(q, 'drive_station').plannedEnd) === '05:55' && Math.round(find(q, 'drive_station').late) === 0, 'מגיעים לתחנה ב-05:55 (' + t('drive_station') + ')');
+  ok(t('train_ride') === '06:14' && toTime(find(q, 'train_ride').plannedEnd) === '08:20', 'רכבת 06:14 עד 08:20');
+  ok(t('airport_checkin') === '08:30', 'צ׳ק-אין ב-08:30 (' + t('airport_checkin') + ')');
+  ok(t('shacharit') === '09:40' && toTime(find(q, 'shacharit').plannedEnd) <= '10:20', 'שחרית אחרי הצ׳ק-אין: ' + t('shacharit') + '–' + toTime(find(q, 'shacharit').plannedEnd));
   ok(t('boarding') === '10:50', 'עלייה למטוס ב-10:50');
   ok(t('flight_ua85') === '11:30', 'ההמראה ב-11:30 (' + t('flight_ua85') + ')');
   ok(!find(q, 'kollel') && !find(q, 'drive_kids'), 'ביום הטיסה אין כולל ופיזור ילדים');
