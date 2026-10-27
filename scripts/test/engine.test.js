@@ -96,7 +96,7 @@ for (let i = 0; i < 21; i++) {
   const st = planDay({ settings: S, date: d, state: {}, zmanim: { ...z, havdala: '18:45' }, now: 300 }).list.find(x => x.id.startsWith('laundry'));
   if (st) wash.push(`${d.getDate()}:${st.steps.filter(x => x.nth).length}`);
 }
-ok(wash.join(',') === '17:3,20:3,22:2,25:3,28:3,31:3,3:3,5:2', 'כביסה — ' + wash.join(','));
+ok(wash.join(',') === '17:3,20:3,22:2,25:3,28:3,31:3', 'כביסה (3.11 ואילך — ימי טיסה, בלי כביסה) — ' + wash.join(','));
 
 // השכבת הילדים — בכל ערב כולל מוצ״ש, משך נלמד
 import { applyLearned } from '../../lib/learn';
@@ -407,6 +407,27 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const next = base.list.find(x => !x.extra && x.id !== cur && !['done', 'skipped', 'auto'].includes(x.status));
   const q2 = planDay({ settings: S, date: day, state: { stations: {}, extras, overrides: { [next.id]: { off: true } } }, zmanim: z, now: toMin('09:18') });
   ok(!q2.list.some(x => x.id === next.id), 'דילוג עד תחנה: התחנות שבדרך יוצאות מהיום');
+}
+
+// ── יום הטיסה (3.11): אחורה מההמראה ב-11:30 ──
+{
+  const fly = new Date('2026-11-03T04:00:00');
+  const q = planDay({ settings: S, date: fly, state: {}, zmanim: z, now: toMin('05:00') });
+  const t = id => { const x = find(q, id); return x ? toTime(x.plannedStart) : '—'; };
+  ok(!!find(q, 'wake') && t('wake') === '05:15', 'יום הטיסה: השכמה ב-05:15 (' + t('wake') + ')');
+  ok(t('drive_airport') === '07:00' && Math.round(find(q, 'drive_airport').late) === 0, 'יוצאים לשדה ב-07:00 ולא מאחרים (' + t('drive_airport') + ')');
+  ok(t('airport_checkin') === '08:30', 'בנמל התעופה ב-08:30 (' + t('airport_checkin') + ')');
+  ok(t('boarding') === '10:50', 'עלייה למטוס ב-10:50');
+  ok(t('flight_ua85') === '11:30', 'ההמראה ב-11:30 (' + t('flight_ua85') + ')');
+  ok(!find(q, 'kollel') && !find(q, 'drive_kids'), 'ביום הטיסה אין כולל ופיזור ילדים');
+  const eve = planDay({ settings: S, date: new Date('2026-11-02T08:00:00'), state: {}, zmanim: z, now: toMin('08:00') });
+  ok(!!find(eve, 'trip_eve'), 'ערב הטיסה: צ׳ק-אין וסידורים');
+  const back = planDay({ settings: S, date: new Date('2026-11-10T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
+  ok(toTime(find(back, 'land_tlv').plannedStart) === '17:20', 'נחיתה בארץ ב-17:20');
+  for (const d of ['2026-11-01', '2026-11-04', '2026-11-09']) {
+    const x = planDay({ settings: S, date: new Date(d + 'T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
+    ok(x.list.length > 3 && x.list.every(s => s.plannedEnd >= s.plannedStart), 'תכנית תקינה ל-' + d);
+  }
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }

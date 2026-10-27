@@ -17,6 +17,7 @@ import Shortcuts from '../components/Shortcuts';
 import HomeEdit from '../components/HomeEdit';
 import { layoutOf } from '../lib/homeLayout';
 import Icon from '../components/Icon';
+import { nextFlight, fmtLeft } from '../lib/trips';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
 
@@ -42,6 +43,7 @@ export default function NowScreen({ go }) {
     </View>
   ) : null;
   const header = (<>{nightBar}<View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}><PlanChange /><LockPause /></View>
+    <FlightCountdown sec={sec} />
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
       <View>
         <T v="tiny" c="sub">יום {DAY_NAMES[dow]}{hebrew ? ` · ${hebrew}` : ''}</T>
@@ -179,6 +181,22 @@ function BlockedSheet() {
         setTimeout(() => Native.openPackage(p), 300);
       }} />
     </Sheet>
+  );
+}
+
+// ספירה לאחור לטיסה הבאה — מופיעה עד 21 יום לפני
+function FlightCountdown() {
+  const t = useT();
+  const nf = nextFlight();
+  if (!nf || nf.ms > 21 * 864e5) return null;
+  const soon = nf.ms < 24 * 3600e3;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm, backgroundColor: soon ? t.warnSoft : t.sunk,
+      borderRadius: R.md, paddingVertical: 8, paddingHorizontal: 12, marginBottom: SP.sm, alignSelf: 'flex-start' }}>
+      <Icon name="send" size={18} color={soon ? t.warn : t.gold} />
+      <T v="small" style={{ fontWeight: '800' }}>עד הטיסה: {fmtLeft(nf.ms)}</T>
+      <T v="tiny" c="sub">{nf.flight.no} · {nf.flight.label}</T>
+    </View>
   );
 }
 

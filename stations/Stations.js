@@ -14,6 +14,7 @@ import { fetchCrmTasks, crmDone, toggleCrmDone } from '../lib/crmTasks';
 import { weekLessons, loadPrep, savePrep } from '../lib/lessons';
 import { loadSupplies, saveSupplies, menuFor } from '../lib/supplies';
 import Icon from '../components/Icon';
+import { TRIP_PLACES } from '../lib/trips';
 
 const fail = e => Alert.alert('לא הצלחתי', String(e?.message || e));
 
@@ -306,7 +307,7 @@ function Drive({ s }) {
 
   const go = async () => {
     actions.start(s.id);
-    try { opened.current = true; await openWaze(settings.places?.[legs[leg]]); } catch (e) { fail(e); }
+    try { opened.current = true; await openWaze(settings.places?.[legs[leg]] || TRIP_PLACES[legs[leg]]); } catch (e) { fail(e); }
   };
   const arrived = () => {
     setReturned(false); opened.current = false;
@@ -322,11 +323,11 @@ function Drive({ s }) {
       {s.chooseOrder && leg === 0 && legs.length > 1 && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginBottom: SP.sm }}>
           <T v="small" c="sub" style={{ alignSelf: 'center' }}>קודם:</T>
-          {legs.map(id => <Chip key={id} label={settings.places?.[id]?.name || id} active={legs[0] === id} onPress={() => first(id)} />)}
+          {legs.map(id => <Chip key={id} label={(settings.places?.[id] || TRIP_PLACES[id])?.name || id} active={legs[0] === id} onPress={() => first(id)} />)}
         </View>
       )}
       {legs.map((id, i) => {
-        const p = settings.places?.[id] || { name: id };
+        const p = settings.places?.[id] || TRIP_PLACES[id] || { name: id };
         const state = i < leg ? 'done' : i === leg ? 'cur' : 'next';
         return (
           <View key={id + i} style={{ flexDirection: 'row', alignItems: 'center', gap: SP.md, paddingVertical: 10, opacity: state === 'done' ? 0.45 : 1 }}>
@@ -343,7 +344,7 @@ function Drive({ s }) {
         );
       })}
       <Actions>
-        <Btn title={`פתח וויז — ${settings.places?.[legs[leg]]?.name || ''}`} icon="nav" kind={returned ? 'line' : 'gold'} onPress={go} />
+        <Btn title={`פתח וויז — ${(settings.places?.[legs[leg]] || TRIP_PLACES[legs[leg]])?.name || ''}`} icon="nav" kind={returned ? 'line' : 'gold'} onPress={go} />
         <Btn title={leg + 1 >= legs.length ? 'הגעתי' : 'הגעתי — לתחנה הבאה'} icon="check"
           kind={returned ? 'ok' : 'primary'} onPress={arrived} />
       </Actions>
