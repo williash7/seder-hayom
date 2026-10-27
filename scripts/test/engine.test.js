@@ -3,6 +3,7 @@ import { planDay, evaluateMinyan } from '../../lib/engine';
 import { DEFAULT_SETTINGS as S } from '../../lib/defaults';
 import { toMin, toTime } from '../../lib/time';
 import { weekLessons } from '../../lib/lessons';
+import { INBOX } from '../../lib/inbox';
 
 let failed = 0;
 const ok = (cond, msg) => { if (!cond) { failed++; console.error('✗ ' + msg); } else console.log('✓ ' + msg); };
@@ -431,6 +432,27 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
     const x = planDay({ settings: S, date: new Date(d + 'T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
     ok(x.list.length > 3 && x.list.every(s => s.plannedEnd >= s.plannedStart), 'תכנית תקינה ל-' + d);
   }
+}
+
+// ── יום בחירות (27.10): הילדים בבית, המשימות מוכנסות והמוסדות יוצאים ──
+{
+  const b = INBOX.find(x => x.id === 'election-2026-10-27');
+  const day = new Date('2026-10-27T09:52:00');
+  const now = toMin('09:52');
+  const DONE = { wake: { status: 'done', start: 400, end: 400 }, morning: { status: 'done', start: 400, end: 420 }, birchos: { status: 'done', start: 420, end: 428 } };
+  const reg = planDay({ settings: S, date: day, state: { stations: DONE }, zmanim: z, now });
+  const cur = reg.current.id;
+  const off = Object.fromEntries(b.offIds.map(id => [id, { off: true }]));
+  const probe = planDay({ settings: S, date: day, state: { stations: DONE, overrides: off }, zmanim: z, now });
+  const beforeId = probe.list.find(x => !['done', 'skipped', 'auto'].includes(x.status))?.id;
+  const extras = b.items.map((x, i) => ({ ...x, id: 'e' + i, batch: 'b1' + (x.group || ''), beforeId: x.beforeId || beforeId }));
+  const q = planDay({ settings: S, date: day, state: { stations: DONE, overrides: off, extras }, zmanim: z, now });
+  const ids = q.list.filter(x => x.status !== 'auto').map(x => x.title);
+  ok(q.list.filter(x => x.extra).length === 8, 'יום בחירות: 8 משימות נכנסו');
+  ok(!q.list.some(x => ['drive_kids', 'kollel', 'drive_tzivia', 'sandwiches'].includes(x.id)), 'יום בחירות: פיזור ילדים, כולל וכריכים יצאו');
+  ok(q.list.filter(x => x.extra).every(x => x.plannedStart >= now - 0.5), 'יום בחירות: המשימות מתחילות מעכשיו');
+  ok(toTime(find(q, 'e0').plannedStart) === '09:52', 'יום בחירות: מתחילים במקווה ב-09:52 (' + toTime(find(q, 'e0').plannedStart) + ', הייתה נוכחית: ' + cur + ')');
+  console.log('סדר:', q.list.filter(x => x.status !== 'auto').map(x => toTime(x.plannedStart) + ' ' + x.title).join(' | '));
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
