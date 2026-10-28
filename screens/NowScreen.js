@@ -279,7 +279,9 @@ function LearningSummary({ data, settings, plan, state }) {
   const current = data?.date === key ? data : null;
   const items = current?.remaining || [];
   const minutes = items.reduce((n,u)=>n+(u.minutes||0),0);
-  const target = Math.max(1, Math.round(plan?.current?.type === 'study' ? plan.current.duration : 10));
+  const nextAt = plan?.nextAnchor?.time;
+  const freeUntilAnchor = Number.isFinite(nextAt) ? Math.max(1, Math.floor(nextAt - (new Date().getHours() * 60 + new Date().getMinutes()))) : null;
+  const target = Math.max(1, Math.min(180, Math.round(plan?.current?.type === 'study' ? Math.max(1, plan.current.plannedEnd - (new Date().getHours() * 60 + new Date().getMinutes())) : (freeUntilAnchor == null ? 10 : Math.min(10, freeUntilAnchor)))));
   const url = (settings.apps?.limud?.url || 'https://williash7.github.io/hoshana-raba/').replace(/\/$/,'');
   const completed = (settings.stations||[]).filter(st=>st.type==='prayer' && ['shacharit','mincha','maariv','shema'].includes(st.prayer) && state?.stations?.[st.id]?.status==='done').map(st=>st.prayer);
   const query = '&markDay='+key+'&markPrayers='+[...new Set(completed)].join(',');
