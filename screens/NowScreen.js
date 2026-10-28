@@ -87,7 +87,14 @@ export default function NowScreen({ go }) {
     );
   }
 
-  const s = plan.current;
+  // כאשר סדר היום משתנה באמצע היום, ייתכן שאין תחנה נוכחית תקינה.
+  // במקום להפיל את מסך הבית, מציגים מעבר בטוח למסך התוכנית.
+  const s = plan?.current;
+  if (!s) return wrap(
+    <Center icon="list" title="אין תחנה פעילה כרגע" sub="אפשר לבדוק את המשימות ולבחור מאיפה להמשיך">
+      <Btn title="לפתוח את סדר היום" kind="gold" style={{ marginTop: SP.lg }} onPress={() => go('day')} />
+    </Center>
+  );
   const startedAt = s.rec?.start;
   const waitingMin = s.plannedStart - now;
   const isWaiting = startedAt == null && waitingMin > 0.5;
