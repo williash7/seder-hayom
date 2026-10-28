@@ -417,9 +417,9 @@ function Minyan({ s }) {
 
 // ───────────── לימוד (ממלא את הזמן עד העוגן הבא) ─────────────
 function Study({ s }) {
-  const { actions, settings, dayDate, learningSnapshot, state } = useDay();
+  const { actions, settings, dayDate, learnSync, state } = useDay();
   const currentDate = dateKey(new Date());
-  const snap = learningSnapshot?.date === currentDate ? learningSnapshot : null;
+  const snap = learnSync?.date === currentDate ? learnSync : null;
   const outstanding = (snap?.remaining || []).filter(x => x.pct < 100);
   const remainingMinutes = outstanding.reduce((sum,x) => sum + x.minutes,0);
   const prayers = ['shacharit','mincha','maariv'].filter(k =>
