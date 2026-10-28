@@ -417,15 +417,27 @@ function Minyan({ s }) {
 
 // ───────────── לימוד (ממלא את הזמן עד העוגן הבא) ─────────────
 function Study({ s }) {
-  const { actions, settings, dayDate } = useDay();
+  const { actions, settings, dayDate, learningSnapshot, state } = useDay();
+  const currentDate = dateKey(new Date());
+  const snap = learningSnapshot?.date === currentDate ? learningSnapshot : null;
+  const outstanding = (snap?.remaining || []).filter(x => x.pct < 100);
+  const remainingMinutes = outstanding.reduce((sum,x) => sum + x.minutes,0);
+  const prayers = ['shacharit','mincha','maariv'].filter(k =>
+    state.stations?.[k]?.status === 'done').join(',');
+  const prayerQuery = prayers ? `&markPrayers=${encodeURIComponent(prayers)}&markDay=${currentDate}` : '';
   const app = settings.apps?.[s.appKey];
   return (
     <Actions>
+      {snap && <Card tone="sunk">
+        <T v="bodyB">נותרו ללימוד: {remainingMinutes} דקות · {outstanding.length} חלקים</T>
+        {outstanding.slice(0,5).map(x => <T key={x.id} v="small" c="sub">{x.name}: {x.minutes} דק׳{x.pct ? ` · ${x.pct}% הושלם` : ''}</T>)}
+      </Card>}
+      {!snap && <T v="small" c="sub">להצגת ההתקדמות: פתח את הלימוד היומי ולחץ ״עדכון סדר היום״.</T>}
       {app && (s.options || [{ label: `פתח את ${app.name}`, path: s.path }])
         .filter(o => !o.days || o.days.includes(dayDate.getDay()))
         .map((o, i) => (
           <Btn key={o.label} title={`${o.label}${s.duration > 0 && i === 0 ? ` · ${fmtDur(s.duration)}` : ''}`} icon="book" kind={i === 0 ? 'gold' : 'line'}
-            onPress={async () => { actions.start(s.id); try { await openAppAt(app, o.path, { wd: dayDate.getDay(), end: toTime(s.plannedEnd) }); } catch (e) { fail(e); } }} />
+            onPress={async () => { actions.start(s.id); try { await openAppAt(app, (o.path || 'index.html?go=1&min={min}') + prayerQuery, { wd: dayDate.getDay(), min: Math.max(1,Math.floor(s.duration||10)), end: toTime(s.plannedEnd) }); } catch (e) { fail(e); } }} />
         ))}
       <Btn title="סיימתי ללמוד" icon="check" kind="line" onPress={() => actions.done(s.id)} />
     </Actions>
