@@ -2,6 +2,7 @@ import { Component, useEffect, useState } from 'react';
 import { View, Text, Pressable, I18nManager, ScrollView, Share, BackHandler } from 'react-native';
 import * as Native from './lib/native';
 import { StatusBar } from 'expo-status-bar';
+import * as Updates from 'expo-updates';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeCtx, useSystemTheme, useT, R } from './lib/theme';
 import { DayProvider, useDay } from './lib/DayContext';
@@ -81,7 +82,17 @@ function Main() {
 }
 
 class Boundary extends Component {
-  state = { err: null };
+  state = { err: null, recovering: false, recoveryError: '' };
+  recover = async () => {
+    this.setState({ recovering: true, recoveryError: '' });
+    try {
+      const update = await Updates.checkForUpdateAsync();
+      if (update.isAvailable) await Updates.fetchUpdateAsync();
+      await Updates.reloadAsync();
+    } catch (e) {
+      this.setState({ recovering: false, recoveryError: String(e?.message || e) });
+    }
+  };
   static getDerivedStateFromError(err) { return { err }; }
   render() {
     if (!this.state.err) return this.props.children;
@@ -89,7 +100,9 @@ class Boundary extends Component {
     return (
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 80 }}>
         <Text style={{ fontSize: 22, fontWeight: '800' }}>משהו נשבר</Text>
-        <Text style={{ marginTop: 8 }}>אפשר לשלוח את השגיאה ל-Claude:</Text>
+        <Text style={{ marginTop: 8 }}>אפשר לשלוח את השגיאה ל-ChatGPT:</Text>
+        <Pressable onPress={this.recover} disabled={this.state.recovering} style={{ marginTop: 16, padding: 14, backgroundColor: '#14213D', borderRadius: 999 }}><Text style={{ color: '#fff', textAlign: 'center', fontWeight: '700' }}>{this.state.recovering ? 'בודק ומתקין עדכון…' : 'בדוק עדכון ושחזר אפליקציה'}</Text></Pressable>
+        {!!this.state.recoveryError && <Text selectable style={{ marginTop: 8, color: '#b45309' }}>{this.state.recoveryError}</Text>}
         <Pressable onPress={() => Share.share({ message: msg })} style={{ marginTop: 16, padding: 14, backgroundColor: '#14213D', borderRadius: 999 }}>
           <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '700' }}>שתף שגיאה</Text>
         </Pressable>
