@@ -6,6 +6,7 @@ import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Sheet, Chip, Field } from '../components/UI';
 import Icon from '../components/Icon';
+import PlanChange from '../components/PlanChange';
 import { toTime, fmtDur, DAY_NAMES } from '../lib/time';
 import { STATION_TYPES } from '../lib/defaults';
 import { useEffect } from 'react';
@@ -155,6 +156,7 @@ export default function DayScreen({ go }) {
         {isToday && <T v="tiny" c="sub">{hebrew || ''}</T>}
         <T v="title">{isToday ? '' : 'מחר — '}יום {DAY_NAMES[dayDate.getDay()]}</T>
         <T c="sub" style={{ marginTop: 2 }}>נעשו {done} · נשארו {plan.list.filter(x => x.status === 'pending' || x.status === 'current').length}</T>
+        {isToday && <View style={{ marginTop: SP.sm }}><PlanChange /></View>}
 
         {Z.length > 0 && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: SP.lg, backgroundColor: t.surface, borderRadius: R.md, borderWidth: 1, borderColor: t.hair, paddingVertical: 6 }}>
