@@ -153,7 +153,7 @@ export default function DayScreen({ go }) {
         </View>
         {isToday && <T v="tiny" c="sub">{hebrew || ''}</T>}
         <T v="title">{isToday ? '' : 'מחר — '}יום {DAY_NAMES[dayDate.getDay()]}</T>
-        <T c="sub" style={{ marginTop: 2 }}>{done} מתוך {plan.list.length} תחנות</T>
+        <T c="sub" style={{ marginTop: 2 }}>נעשו {done} · נשארו {plan.list.filter(x => x.status === 'pending' || x.status === 'current').length}</T>
 
         {Z.length > 0 && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: SP.lg, backgroundColor: t.surface, borderRadius: R.md, borderWidth: 1, borderColor: t.hair, paddingVertical: 6 }}>

@@ -375,7 +375,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const S2 = JSON.parse(JSON.stringify(S));
   S2.places.tzivia.minutes = 21; S2.places.mendele.minutes = 6; S2.places.gan.minutes = 14;
   const st = { stations: {}, choices: {} };
-  for (const id of ['wake', 'morning', 'shopping', 'sandwiches']) st.stations[id] = { status: 'done', start: 540, end: 592 };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches']) st.stations[id] = { status: 'done', start: 540, end: 592 };
   const q = planDay({ settings: S2, date: new Date(2026, 9, 23, 6), state: st, zmanim: z, now: toMin('09:53') });
   ok(find(q, 'fri_mendele').late < 0.5 && find(q, 'fri_girls').late < 0.5, 'שישי עמוס — איסוף מענדלה והבנות בלי איחור');
   ok(find(q, 'shacharit').plannedStart < find(q, 'fri_pick1').plannedStart, 'השחרית נשארת לפני האיסוף (לא נדחית)');
@@ -453,6 +453,19 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(q.list.filter(x => x.extra).every(x => x.plannedStart >= now - 0.5), 'יום בחירות: המשימות מתחילות מעכשיו');
   ok(toTime(find(q, 'e0').plannedStart) === '09:52', 'יום בחירות: מתחילים במקווה ב-09:52 (' + toTime(find(q, 'e0').plannedStart) + ', הייתה נוכחית: ' + cur + ')');
   console.log('סדר:', q.list.filter(x => x.status !== 'auto').map(x => toTime(x.plannedStart) + ' ' + x.title).join(' | '));
+}
+
+// תחנה שסומנה בסדר הפוך (דילגתי על לימוד שבהמשך) לא מחזירה את הלוז אחורה — אין שעות שלא מסתדרות
+{
+  const day = new Date('2026-10-28T09:50:00');
+  const st = { stations: {}, choices: {} };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit', 'study_am']) st.stations[id] = { status: 'done', start: 400, end: 410 };
+  st.stations.korbanot = { start: toMin('09:47') };
+  st.stations.study_post = { status: 'skipped', start: toMin('09:44'), end: toMin('09:44') };
+  const q = planDay({ settings: S, date: day, state: st, zmanim: z, now: toMin('09:50') });
+  const l = q.list.filter(x => !['done', 'skipped', 'auto'].includes(x.status));
+  ok(l.every((x, i) => i === 0 || x.plannedStart + 0.01 >= l[i - 1].plannedStart), 'סדר השעות עולה (דילוג על לימוד שבהמשך)');
+  ok(find(q, 'kollel').late < 0.5, 'הכולל ב-10:00 בלי איחור');
 }
 
 if (failed) { console.error(`\n${failed} בדיקות נכשלו`); process.exit(1); }
