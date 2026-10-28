@@ -52,6 +52,17 @@ export default function UpdateButton() {
     } catch (e) { setOta('לא הצלחתי לבדוק: ' + String(e?.message || e)); }
   };
 
+  // טעינה מחדש של קוד האפליקציה מהעדכון המותקן, בלי למחוק נתונים.
+  const restartApp = async () => {
+    try {
+      setOta('מפעיל מחדש…');
+      await Updates.reloadAsync();
+    } catch (e) {
+      setOta('לא ניתן להפעיל מחדש: ' + String(e?.message || e));
+      Alert.alert('ההפעלה מחדש נכשלה', 'אפשר לסגור את האפליקציה מרשימת האפליקציות הפתוחות ולפתוח אותה מחדש.');
+    }
+  };
+
   const [shot, setShot] = useState(null);
   const [shotMsg, setShotMsg] = useState('');
   const press = async () => {
@@ -97,6 +108,7 @@ export default function UpdateButton() {
               : `מותקנת בנייה ${installed || '—'}${latest ? ' — זו האחרונה' : ''}.`}
           </T>
           <Btn title="בדוק עדכון מהיר" icon="undo" kind="line" onPress={checkOta} />
+          <Btn title="הפעל מחדש את האפליקציה" icon="undo" kind="line" onPress={restartApp} />
           {!!ota && <T v="small" c="sub">{ota}</T>}
           {hasNew && <Btn title="להתקין את הגרסה החדשה" icon="fwd" kind="gold" onPress={() => go(RELEASES)} />}
           {!!shot && (
