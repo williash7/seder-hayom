@@ -1,6 +1,6 @@
 // "עכשיו" — המסך המרכזי: רק התחנה הנוכחית, והעוגן הבא
 // Pressable is required by the tappable flight countdown and top actions.
-import { View, ScrollView, Alert, Pressable } from 'react-native';
+import { View, ScrollView, Alert, Pressable, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useDay } from '../lib/DayContext';
@@ -27,7 +27,7 @@ function KeepAwake() { useKeepAwake(); return null; }
 export default function NowScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan, now, hebrew, dayDate, zmanim, settings, eff, actions, loaded, loadError, reload, night, nightUntil } = useDay();
+  const { plan, now, hebrew, dayDate, zmanim, settings, eff, actions, loaded, loadError, reload, learnSync, night, nightUntil } = useDay();
   const sec = useSeconds();
   const [showTopActions, setShowTopActions] = useState(false);
   if (!loaded) return (
@@ -81,6 +81,7 @@ export default function NowScreen({ go }) {
       contentContainerStyle={{ padding: SP.xl, paddingTop: ins.top + SP.lg, paddingBottom: layoutOf(settings).hidden.includes('dock') ? 120 : 24 }}
       keyboardShouldPersistTaps="handled">
       {header}
+      <LearningSummary data={learnSync} settings={settings} plan={plan} />
       {body}
       {layoutOf(settings).order.filter(k => !layoutOf(settings).hidden.includes(k)).map(k => (k === 'shortcuts' ? <Shortcuts key={k} /> : k === 'widgets' ? <Widgets key={k} /> : null))}
       <HomeEdit />
@@ -266,6 +267,40 @@ function FlightCountdown({ sec }) {
         </ScrollView>
       </Sheet>
     </>
+  );
+}
+
+// סטטוס לימוד שהועבר מאפליקציית הלימוד; לא מציגים כמידע חי אם עבר יום.
+function LearningSummary({ data, settings, plan }) {
+  const t = useT();
+  const today = new Date();
+  const key = [today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+  const current = data?.date === key ? data : null;
+  const items = current?.remaining || [];
+  const minutes = items.reduce((n,u)=>n+(u.minutes||0),0);
+  const target = Math.max(1, Math.round(plan?.current?.type === 'study' ? plan.current.duration : 10));
+  const url = (settings.apps?.limud?.url || 'https://williash7.github.io/hoshana-raba/').replace(/\\/$/,'');
+  const open = () => Linking.openURL(url+'/index.html?go=1&min='+target).catch(()=>{});
+  if (!current) return (
+    <Pressable onPress={() => Linking.openURL(url+'/index.html')} style={{ marginTop: 5, paddingVertical: 8 }}>
+      <T v="small" c="sub">📖 לימוד יומי · פתח כדי לסנכרן את מצב הלימוד</T>
+    </Pressable>
+  );
+  return (
+    <View style={{ borderRadius: R.md, backgroundColor: t.sunk, padding: SP.md, marginTop: SP.sm }}>
+      <View style={{ flexDirection:'row',justifyContent:'space-between',alignItems:'center' }}>
+        <T v="bodyB">📖 הלימוד שנותר</T>
+        <T v="small" c="sub">{minutes} דק׳ לפי הקצב שלך</T>
+      </View>
+      <T v="small" c="sub" style={{ marginTop: 5 }} numberOfLines={2}>
+        {items.length ? items.slice(0,4).map(x=>x.name+' · '+x.minutes+' דק׳').join(' | ') : 'כל הלימודים שסונכרנו הושלמו ✓'}
+      </T>
+      <View style={{ marginTop: SP.sm, flexDirection: 'row', gap: SP.sm }}>
+        <Btn small kind="gold" title={'ללמוד '+target+' דקות'} onPress={open} />
+        <Btn small kind="line" title="סנכרון" onPress={() => Linking.openURL(url+'/index.html').catch(()=>{})} />
+      </View>
+      <T v="tiny" c="sub" style={{ marginTop: 6 }}>לעדכון ההתקדמות: לחץ באתר הלימוד על ״עדכון סדר היום״.</T>
+    </View>
   );
 }
 
