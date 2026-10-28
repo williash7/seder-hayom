@@ -279,11 +279,17 @@ function Supplies({ s }) {
 
 // ───────────── טיימר פשוט ─────────────
 function Timer({ s }) {
-  const { actions } = useDay();
+  const { actions, settings, dayDate } = useDay();
   const started = s.rec?.start != null;
+  const app = s.appKey ? settings.apps?.[s.appKey] : null;
+  const open = async () => {
+    if (!started) actions.start(s.id);
+    try { await openAppAt(app, s.path, { wd: dayDate.getDay(), min: Math.max(1, Math.round(s.duration || s.minutes || 10)), end: toTime(s.plannedEnd) }); } catch (e) { fail(e); }
+  };
   return (
     <Actions>
-      {!started && <Btn title="התחל טיימר" icon="play" kind="gold" onPress={() => actions.start(s.id)} />}
+      {app && s.path && <Btn title={`פתח את ${s.title} ב${app.name}`} icon="book" kind="gold" onPress={open} />}
+      {!started && <Btn title="התחל טיימר" icon="play" kind={app && s.path ? 'line' : 'gold'} onPress={() => actions.start(s.id)} />}
       <Btn title="סיימתי" icon="check" kind={started ? 'ok' : 'line'} onPress={() => actions.done(s.id)} />
     </Actions>
   );
@@ -428,12 +434,20 @@ function Study({ s }) {
 
 // ───────────── תפילה ─────────────
 function Prayer({ s }) {
-  const { actions, now } = useDay();
+  const { actions, now, settings, dayDate } = useDay();
+  const app = s.appKey ? settings.apps?.[s.appKey] : null;
+  const open = async () => {
+    if (s.rec?.start == null) actions.start(s.id);
+    try { await openAppAt(app, s.path, { wd: dayDate.getDay(), min: Math.max(1, Math.round(s.duration || 20)), end: toTime(s.plannedEnd) }); } catch (e) { fail(e); }
+  };
   const wait = Math.round(s.plannedStart - now);
   return (
     <View>
       <T v="h2" style={{ textAlign: 'center' }}>{!s.anchor ? 'כל המניינים עברו — ביחידות' : wait > 0 ? `מתחילים ב-${toTime(s.plannedStart)} · בעוד ${fmtDur(wait)}` : `מניין ${toTime(s.plannedStart)}`}</T>
-      <Actions><Btn title="התפללתי" icon="check" kind="ok" onPress={() => actions.done(s.id)} /></Actions>
+      <Actions>
+        {app && s.path && <Btn title={`פתח את ה${s.title.replace(/ ביחידות.*$/, '')} ב${app.name}`} icon="book" kind="gold" onPress={open} />}
+        <Btn title="התפללתי" icon="check" kind="ok" onPress={() => actions.done(s.id)} />
+      </Actions>
     </View>
   );
 }
