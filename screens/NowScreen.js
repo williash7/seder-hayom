@@ -66,16 +66,6 @@ export default function NowScreen({ go }) {
       </Pressable>
     </View>
     <FlightCountdown sec={sec} />
-    {learningSnapshot?.date === dateKeyLocal(new Date()) && (
-      <Pressable onPress={() => Linking.openURL((settings.apps?.limud?.url || 'https://williash7.github.io/hoshana-raba/') + 'index.html?go=1&min=10').catch(()=>{})}
-        style={{ paddingVertical: 7, paddingHorizontal: 10, borderRadius: R.md, backgroundColor: t.sunk, marginBottom: SP.sm, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Icon name="book" size={17} color={t.gold} />
-        <T v="small" style={{ flex: 1 }} numberOfLines={1}>
-          לימוד שנותר: {learningSnapshot.remaining.filter(x=>x.pct<100).length} חלקים · {learningSnapshot.remaining.reduce((n,x)=>n+x.minutes,0)} דק׳
-        </T>
-        <Icon name="chevron-left" size={16} color={t.sub} />
-      </Pressable>
-    )}
     {plan.nextAnchor && <View style={{ marginBottom: 6 }}><T v="tiny" c="sub" numberOfLines={1}>
       הבא: {plan.nextAnchor.title} · {toTime(plan.nextAnchor.time)}{plan.nextAnchor.late > 1 ? ` · איחור ${Math.round(plan.nextAnchor.late)} דק׳` : ''}
     </T></View>}
