@@ -432,7 +432,10 @@ function Study({ s }) {
         <T v="bodyB">נותרו ללימוד: {remainingMinutes} דקות · {outstanding.length} חלקים</T>
         {outstanding.slice(0,5).map(x => <T key={x.id} v="small" c="sub">{x.name}: {x.minutes} דק׳{x.pct ? ` · ${x.pct}% הושלם` : ''}</T>)}
       </Card>}
-      {!snap && <T v="small" c="sub">להצגת ההתקדמות: פתח את הלימוד היומי ולחץ ״עדכון סדר היום״.</T>}
+      <Btn title={snap ? 'רענן התקדמות מהלימוד היומי' : 'ייבא את ההתקדמות מהלימוד היומי'}
+        icon="undo" kind="line" small onPress={() =>
+          openAppAt(app, 'index.html?syncSeder=1').catch(fail)} />
+      {!snap && <T v="small" c="sub">לחיצה מייבאת את הלימודים שנותרו ואת הזמן המשוער.</T>}
       {app && (s.options || [{ label: `פתח את ${app.name}`, path: s.path }])
         .filter(o => !o.days || o.days.includes(dayDate.getDay()))
         .map((o, i) => (
