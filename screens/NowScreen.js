@@ -28,7 +28,7 @@ export default function NowScreen({ go }) {
   const ins = useSafeAreaInsets();
   const { plan, now, hebrew, dayDate, zmanim, settings, eff, actions, loaded, loadError, reload, night, nightUntil } = useDay();
   const sec = useSeconds();
-  const [showStation, setShowStation] = useState(false);
+  const [showTopActions, setShowTopActions] = useState(false);
   if (!loaded) return (
     <View style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: SP.xl }}>
       <T v="h2">{loadError ? 'לא הצלחנו לטעון את סדר היום' : 'טוען את סדר היום…'}</T>
@@ -49,44 +49,39 @@ export default function NowScreen({ go }) {
       </T>
     </View>
   ) : null;
-  const header = (<>{nightBar}<View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}><PlanChange /><LockPause /></View>
-    <FlightCountdown sec={sec} />
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <View>
-        <T v="tiny" c="sub">יום {DAY_NAMES[dow]}{hebrew ? ` · ${hebrew}` : ''}</T>
-        <T v="h2" style={{ marginTop: 2 }}>{toTime(Math.floor(sec / 60))}</T>
+  // אזור עליון נקי: פרטי היום בשורה אחת, פעולות נוספות רק בלחיצה.
+  const header = (<>
+    {nightBar}
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SP.sm, marginBottom: SP.sm }}>
+      <View style={{ flex: 1 }}>
+        <T v="tiny" c="sub" numberOfLines={1}>יום {DAY_NAMES[dow]}{hebrew ? ` · ${hebrew}` : ''}</T>
+        <T v="h2" style={{ marginTop: 1 }}>{toTime(Math.floor(sec / 60))}</T>
       </View>
-      {plan.nextAnchor && <AnchorPill a={plan.nextAnchor} now={now} />}
+      <Pressable onPress={() => setShowTopActions(v => !v)}
+        style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: R.md, backgroundColor: t.sunk, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Icon name="settings" size={16} color={t.sub} />
+        <T v="small" c="sub">{showTopActions ? 'סגור' : 'פעולות'}</T>
+      </Pressable>
     </View>
+    {plan.nextAnchor && <View style={{ marginBottom: 6 }}><T v="tiny" c="sub" numberOfLines={1}>
+      הבא: {plan.nextAnchor.title} · {toTime(plan.nextAnchor.time)}{plan.nextAnchor.late > 1 ? ` · איחור ${Math.round(plan.nextAnchor.late)} דק׳` : ''}
+    </T></View>}
+    {showTopActions && (
+      <View style={{ backgroundColor: t.sunk, padding: SP.md, borderRadius: R.md, marginBottom: SP.md }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
+          <PlanChange /><LockPause />
+        </View>
+        <FlightCountdown sec={sec} />
+      </View>
+    )}
   </>);
-
   const wrap = body => (<>
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }}
       contentContainerStyle={{ padding: SP.xl, paddingTop: ins.top + SP.lg, paddingBottom: layoutOf(settings).hidden.includes('dock') ? 120 : 24 }}
       keyboardShouldPersistTaps="handled">
       {header}
-      {plan?.current && !showStation && (
-        <Card style={{ marginTop: SP.lg, marginBottom: SP.sm }}>
-          <T v="tiny" c="sub">עכשיו בסדר היום</T>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm, marginTop: SP.sm }}>
-            <Icon name={plan.current.icon || 'now'} size={28} color={t.gold} />
-            <View style={{ flex: 1 }}>
-              <T v="bodyB">{plan.current.title}</T>
-              <T v="small" c="sub">עד {toTime(plan.current.plannedEnd)}{plan.current.late > 1 ? ` · איחור ${Math.round(plan.current.late)} דק׳` : ''}</T>
-            </View>
-            <Btn title="פתח" kind="gold" small onPress={() => setShowStation(true)} />
-          </View>
-        </Card>
-      )}
-      {!showStation && layoutOf(settings).order.filter(k => !layoutOf(settings).hidden.includes(k)).map(k =>
-        k === 'shortcuts' ? <Shortcuts key={k} /> : k === 'widgets' ? <Widgets key={k} /> : null)}
-      {showStation || !plan?.current ? body : null}
-      {showStation && (
-        <Btn title="חזרה למסך הבית" kind="line" small style={{ marginTop: SP.lg }}
-          onPress={() => setShowStation(false)} />
-      )}
-      {showStation && layoutOf(settings).order.filter(k => !layoutOf(settings).hidden.includes(k)).map(k =>
-        k === 'shortcuts' ? <Shortcuts key={k} /> : k === 'widgets' ? <Widgets key={k} /> : null)}
+      {body}
+      {layoutOf(settings).order.filter(k => !layoutOf(settings).hidden.includes(k)).map(k => (k === 'shortcuts' ? <Shortcuts key={k} /> : k === 'widgets' ? <Widgets key={k} /> : null))}
       <HomeEdit />
     </ScrollView>
     {!layoutOf(settings).hidden.includes('dock') && <Dock />}
