@@ -25,9 +25,21 @@ jobs:
       - run: npm ci
       - name: בדיקת מנוע היום
         run: node scripts/check-engine.js
-      - name: שליחת העדכון
+      - name: אימות הגדרות פרסום
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo '::error::חסר EXPO_TOKEN בסודות המאגר. עדכון OTA לא יכול להתפרסם.'
+            exit 1
+          fi
+          node -e "const a=require('./app.json').expo; if(!a.updates?.url || !a.runtimeVersion) process.exit(1); console.log('Expo OTA URL:', a.updates.url, 'runtime:', a.runtimeVersion)"
+      - name: שליחת העדכון
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: '1'
+        run: |
           MSG=$(git log -1 --pretty=%s)
           npx --yes eas-cli@latest update --channel preview --environment preview --message "$MSG" --platform android --non-interactive
+      - name: אישור פרסום
+        run: echo 'OTA publish command succeeded; check the installed app under בדוק עדכון מהיר.'
