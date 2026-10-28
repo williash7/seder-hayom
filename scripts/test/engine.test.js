@@ -135,7 +135,12 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const q2 = planDay({ settings: S2, date: new Date(2026, 9, 20, 6), state: {}, zmanim: z, now: 300 });
   ok(find(q2, 'sandwiches').steps.filter(x => x.label.startsWith('מענדלה')).length === 1, 'שלישי — למענדלה כריך אחד');
   const ids = q.list.map(x => x.id);
-  ok(ids.indexOf('supplies_eve') === ids.indexOf('drive_home2') + 1, 'מצרכים למחר — מיד כשחוזרים הביתה');
+  ok(ids.indexOf('supplies_eve') > ids.indexOf('drive_home3') &&
+     ids.indexOf('supplies_eve') < ids.indexOf('plan_tomorrow') &&
+     ids.indexOf('plan_tomorrow') < ids.indexOf('catchup') &&
+     ids.indexOf('catchup') < ids.indexOf('prepare_tomorrow') &&
+     ids.indexOf('prepare_tomorrow') < ids.indexOf('day_close'),
+     'הכנות למחר — בערב לאחר החזרה ולפני סגירת היום');
   const S4 = { ...S2, stations: S2.stations.map(x => x.id === 'shopping' ? { ...x, enabled: false } : x) };
   ok(!find(planDay({ settings: S4, date: new Date(2026, 9, 18, 6), state: {}, zmanim: z, now: 300 }), 'shopping'), 'סומן בערב — לא מופיע בבוקר');
 }
