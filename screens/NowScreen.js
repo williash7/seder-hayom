@@ -27,7 +27,7 @@ function KeepAwake() { useKeepAwake(); return null; }
 export default function NowScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan, now, hebrew, dayDate, zmanim, settings, eff, actions, loaded, loadError, reload, learnSync, night, nightUntil } = useDay();
+  const { plan, now, hebrew, dayDate, zmanim, settings, eff, actions, state, loaded, loadError, reload, learnSync, night, nightUntil } = useDay();
   const sec = useSeconds();
   const [showTopActions, setShowTopActions] = useState(false);
   if (!loaded) return (
@@ -81,7 +81,7 @@ export default function NowScreen({ go }) {
       contentContainerStyle={{ padding: SP.xl, paddingTop: ins.top + SP.lg, paddingBottom: layoutOf(settings).hidden.includes('dock') ? 120 : 24 }}
       keyboardShouldPersistTaps="handled">
       {header}
-      <LearningSummary data={learnSync} settings={settings} plan={plan} />
+      <LearningSummary data={learnSync} settings={settings} plan={plan} state={state} />
       {body}
       {layoutOf(settings).order.filter(k => !layoutOf(settings).hidden.includes(k)).map(k => (k === 'shortcuts' ? <Shortcuts key={k} /> : k === 'widgets' ? <Widgets key={k} /> : null))}
       <HomeEdit />
@@ -271,7 +271,7 @@ function FlightCountdown({ sec }) {
 }
 
 // סטטוס לימוד שהועבר מאפליקציית הלימוד; לא מציגים כמידע חי אם עבר יום.
-function LearningSummary({ data, settings, plan }) {
+function LearningSummary({ data, settings, plan, state }) {
   const t = useT();
   const today = new Date();
   const key = [today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
@@ -280,7 +280,10 @@ function LearningSummary({ data, settings, plan }) {
   const minutes = items.reduce((n,u)=>n+(u.minutes||0),0);
   const target = Math.max(1, Math.round(plan?.current?.type === 'study' ? plan.current.duration : 10));
   const url = (settings.apps?.limud?.url || 'https://williash7.github.io/hoshana-raba/').replace(/\\/$/,'');
-  const open = () => Linking.openURL(url+'/index.html?go=1&min='+target).catch(()=>{});
+  const completed = (settings.stations||[]).filter(st=>st.type==='prayer' && ['shacharit','mincha','maariv','shema'].includes(st.prayer) && state?.stations?.[st.id]?.status==='done').map(st=>st.prayer);
+  const query = '&markDay='+key+'&markPrayers='+[...new Set(completed)].join(',');
+  const open = () => Linking.openURL(url+'/index.html?go=1&min='+target+query).catch(()=>{});
+  const sync = () => Linking.openURL(url+'/index.html?fromSeder=1'+query).catch(()=>{});
   if (!current) return (
     <Pressable onPress={() => Linking.openURL(url+'/index.html')} style={{ marginTop: 5, paddingVertical: 8 }}>
       <T v="small" c="sub">📖 לימוד יומי · פתח כדי לסנכרן את מצב הלימוד</T>
@@ -297,7 +300,7 @@ function LearningSummary({ data, settings, plan }) {
       </T>
       <View style={{ marginTop: SP.sm, flexDirection: 'row', gap: SP.sm }}>
         <Btn small kind="gold" title={'ללמוד '+target+' דקות'} onPress={open} />
-        <Btn small kind="line" title="סנכרון" onPress={() => Linking.openURL(url+'/index.html').catch(()=>{})} />
+        <Btn small kind="line" title="סנכרון" onPress={sync} />
       </View>
       <T v="tiny" c="sub" style={{ marginTop: 6 }}>לעדכון ההתקדמות: לחץ באתר הלימוד על ״עדכון סדר היום״.</T>
     </View>
