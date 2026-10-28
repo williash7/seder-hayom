@@ -288,7 +288,7 @@ function LearningSummary({ data, settings, plan, state }) {
   const open = () => Linking.openURL(url+'/index.html?go=1&min='+target+query).catch(()=>{});
   const sync = () => Linking.openURL(url+'/index.html?fromSeder=1'+query).catch(()=>{});
   if (!current) return (
-    <Pressable onPress={() => Linking.openURL(url+'/index.html')} style={{ marginTop: 5, paddingVertical: 8 }}>
+    <Pressable onPress={sync} style={{ marginTop: 5, paddingVertical: 8 }}>
       <T v="small" c="sub">📖 לימוד יומי · פתח כדי לסנכרן את מצב הלימוד</T>
     </Pressable>
   );
@@ -305,7 +305,7 @@ function LearningSummary({ data, settings, plan, state }) {
         <Btn small kind="gold" title={'ללמוד '+target+' דקות'} onPress={open} />
         <Btn small kind="line" title="סנכרון" onPress={sync} />
       </View>
-      <T v="tiny" c="sub" style={{ marginTop: 6 }}>לעדכון ההתקדמות: לחץ באתר הלימוד על ״עדכון סדר היום״.</T>
+      <T v="tiny" c="sub" style={{ marginTop: 6 }}>כשתסיים ללמוד, לחץ על ״סיימתי — עדכן את סדר היום״ כדי לחזור עם ההתקדמות.</T>
     </View>
   );
 }
