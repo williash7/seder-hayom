@@ -12,7 +12,7 @@ import { useDay } from '../lib/DayContext';
 import { T, Btn, Sheet } from './UI';
 import Icon from './Icon';
 
-export const CHAT_URL = 'https://chatgpt.com/g/g-p-6ae1bfcbf6bc8191a08da68d54ad519e-pylqtsyh-nyhvl-yshy/c/6ae1c356-9134-83eb-bb01-007de5a92dd4';
+export const CHAT_URL = 'https://chatgpt.com/c/6ae1c356-9134-83eb-bb01-007de5a92dd4';
 const REPO = 'williash7/seder-hayom';
 const RELEASES = `https://github.com/${REPO}/releases/latest`;
 
