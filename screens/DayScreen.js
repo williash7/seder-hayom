@@ -135,6 +135,7 @@ export default function DayScreen({ go }) {
   };
   const offList = (settings.stations || []).filter(x => overrides[x.id]?.off);
   const [sel, setSel] = useState(null);
+  const [movePicker, setMovePicker] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const isPast = s => s.status === 'done' || s.status === 'skipped' || s.status === 'auto';
   const pastCount = plan.list.filter(isPast).length;
@@ -175,7 +176,7 @@ export default function DayScreen({ go }) {
             const cur = s.status === 'current';
             const off = s.status === 'done' || s.status === 'skipped' || s.status === 'auto';
             return (
-              <Pressable key={s.id} onPress={() => setSel(s)}
+              <Pressable key={s.id} onPress={() => { setMovePicker(false); setSel(s); }}
                 style={{ flexDirection: 'row', gap: SP.md, minHeight: 58 }}>
                 <View style={{ width: 52, alignItems: 'flex-start', paddingTop: 2 }}>
                   <T v="small" style={{ color: cur ? t.gold : off ? t.faint : t.sub, fontWeight: cur ? '800' : '600' }}>
@@ -240,6 +241,26 @@ export default function DayScreen({ go }) {
             )}
             {isToday && sel.status !== 'done' && sel.status !== 'skipped' && (
               <Btn title="לדלג" icon="skip" kind="ghost" onPress={() => { actions.skip(sel.id); setSel(null); }} />
+            )}
+            {isToday && !['done', 'skipped', 'auto'].includes(sel.status) &&
+              !sel.at && !sel.arriveBy && !sel.protect && sel.rec?.start == null && (
+              <>
+                <Btn title="שינוי סדר — להעביר תחנה" icon="fwd" kind="line"
+                  onPress={() => setMovePicker(v => !v)} />
+                {movePicker && (
+                  <View style={{ gap: SP.sm }}>
+                    <T v="small" c="sub">לפני איזו תחנה להעביר את ״{sel.title}״? שאר המשימות נשמרות.</T>
+                    {plan.list.filter(x => x.id !== sel.id &&
+                      !['done', 'skipped', 'auto'].includes(x.status) && !x.dropped).map(x => (
+                      <Btn key={x.id} title={`לפני: ${x.title} (${toTime(x.plannedStart)})`}
+                        kind="ghost" small onPress={() => {
+                          actions.moveStationBefore(sel.id, x.id);
+                          setMovePicker(false); setSel(null);
+                        }} />
+                    ))}
+                  </View>
+                )}
+              </>
             )}
             {isToday && sel.extra && (
               <Btn title="להוריד מהתוכנית" icon="x" kind="ghost" onPress={() => { actions.removeExtra(sel.id); setSel(null); }} />
