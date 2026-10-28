@@ -1,4 +1,4 @@
-// כפתור קבוע בצד המסך: לבקש שינוי מ-Claude, או להתקין גרסה חדשה.
+// כפתור קבוע בצד המסך: לבקש שינוי ב-ChatGPT, או להתקין גרסה חדשה.
 // בודק ב-GitHub אם יש בנייה חדשה יותר מזו שמותקנת, ומסמן בנקודה.
 import { useEffect, useState } from 'react';
 import { View, Pressable, Linking, Alert, Image } from 'react-native';
@@ -12,7 +12,7 @@ import { useDay } from '../lib/DayContext';
 import { T, Btn, Sheet } from './UI';
 import Icon from './Icon';
 
-export const CHAT_URL = 'https://claude.ai/code/session_01U1eHQ7BU1KYHY9NWunHXgv';
+export const CHAT_URL = 'https://chatgpt.com/g/g-p-6ae1bfcbf6bc8191a08da68d54ad519e-pylqtsyh-nyhvl-yshy/c/6ae1c356-9134-83eb-bb01-007de5a92dd4';
 const REPO = 'williash7/seder-hayom';
 const RELEASES = `https://github.com/${REPO}/releases/latest`;
 
@@ -60,14 +60,14 @@ export default function UpdateButton() {
     setShotMsg('');
     setOpen(true);
   };
-  const sendToClaude = async () => {
+  const sendToChatGPT = async () => {
     if (shot) {
       try {
         const perm = await MediaLibrary.requestPermissionsAsync(true);
         if (perm.granted) { await MediaLibrary.saveToLibraryAsync(shot); setShotMsg('הצילום נשמר בגלריה — בשיחה לוחצים + ובוחרים אותו'); }
       } catch {}
     }
-    setTimeout(() => go(settings.chatUrl || CHAT_URL), shot ? 900 : 0);
+    setTimeout(() => go(CHAT_URL), shot ? 900 : 0);
   };
   const shareShot = async () => {
     try { await Sharing.shareAsync(shot, { mimeType: 'image/jpeg', dialogTitle: 'שליחת צילום מסך' }); }
@@ -105,8 +105,8 @@ export default function UpdateButton() {
               <T v="small" c="sub" style={{ flex: 1 }}>צילום של המסך שהיה פתוח — יישמר בגלריה כדי לצרף לבקשה</T>
             </View>
           )}
-          <Btn title={shot ? 'לבקש שינוי מ-Claude + צילום' : 'לבקש שינוי מ-Claude'} icon="edit" kind={hasNew ? 'line' : 'primary'}
-            onPress={sendToClaude} />
+          <Btn title={shot ? 'לבקש שינוי ב-ChatGPT + צילום' : 'לבקש שינוי ב-ChatGPT'} icon="edit" kind={hasNew ? 'line' : 'primary'}
+            onPress={sendToChatGPT} />
           {!!shotMsg && <T v="small" style={{ color: t.ok }}>{shotMsg}</T>}
           {!!shot && <Btn title="לשתף את הצילום" icon="send" kind="ghost" small onPress={shareShot} />}
           {!hasNew && <Btn title="לכל הגרסאות" kind="ghost" small onPress={() => go(RELEASES)} />}
