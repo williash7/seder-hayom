@@ -26,9 +26,15 @@ function KeepAwake() { useKeepAwake(); return null; }
 export default function NowScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan, now, hebrew, dayDate, zmanim, settings, eff, actions, loaded, night, nightUntil } = useDay();
+  const { plan, now, hebrew, dayDate, zmanim, settings, eff, actions, loaded, loadError, reload, night, nightUntil } = useDay();
   const sec = useSeconds();
-  if (!loaded) return <View style={{ flex: 1, backgroundColor: t.bg }} />;
+  if (!loaded) return (
+    <View style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: SP.xl }}>
+      <T v="h2">{loadError ? 'לא הצלחנו לטעון את סדר היום' : 'טוען את סדר היום…'}</T>
+      {!!loadError && <T v="small" c="sub" style={{ marginTop: SP.md, textAlign: 'center' }}>{loadError}</T>}
+      <Btn title="לנסות שוב" kind="gold" style={{ marginTop: SP.xl }} onPress={reload} />
+    </View>
+  );
 
   const dow = dayDate.getDay();
   const inShabbat = (dow === 5 && zmanim.candles && now >= toMin(zmanim.candles))
