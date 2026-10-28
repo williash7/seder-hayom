@@ -1,4 +1,5 @@
 // "עכשיו" — המסך המרכזי: רק התחנה הנוכחית, והעוגן הבא
+// Pressable is required by the tappable flight countdown and top actions.
 import { View, ScrollView, Alert, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
