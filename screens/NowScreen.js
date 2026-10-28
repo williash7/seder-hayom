@@ -17,7 +17,7 @@ import Shortcuts from '../components/Shortcuts';
 import HomeEdit from '../components/HomeEdit';
 import { layoutOf } from '../lib/homeLayout';
 import Icon from '../components/Icon';
-import { nextFlight, OUTBOUND_MILESTONES } from '../lib/trips';
+import { nextFlight, fmtLeft, OUTBOUND_MILESTONES } from '../lib/trips';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
 
@@ -259,7 +259,7 @@ function FlightCountdown({ sec }) {
                 <T v="bodyB">{event.title}</T>
                 <T v="small" c="sub">{formatTime(event.at)}{event.note ? ' · ' + event.note : ''}</T>
               </View>
-              {event.at > Date.now() && <T v="tiny" c="sub">{Math.ceil((event.at - Date.now()) / 60000)} דק׳</T>}
+              {event.at > Date.now() && <T v="tiny" c="sub">{fmtLeft(event.at - Date.now())}</T>}
             </View>
           ))}
         </ScrollView>
