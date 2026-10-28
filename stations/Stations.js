@@ -422,8 +422,9 @@ function Study({ s }) {
   const snap = learnSync?.date === currentDate ? learnSync : null;
   const outstanding = (snap?.remaining || []).filter(x => x.pct < 100);
   const remainingMinutes = outstanding.reduce((sum,x) => sum + x.minutes,0);
-  const prayers = ['shacharit','mincha','maariv'].filter(k =>
-    state.stations?.[k]?.status === 'done').join(',');
+  const prayers = [...new Set((settings.stations || []).filter(st =>
+    st.type === 'prayer' && ['shacharit','mincha','maariv','shema'].includes(st.prayer) &&
+    state.stations?.[st.id]?.status === 'done').map(st => st.prayer))].join(',');
   const prayerQuery = prayers ? `&markPrayers=${encodeURIComponent(prayers)}&markDay=${currentDate}` : '';
   const app = settings.apps?.[s.appKey];
   return (
@@ -440,7 +441,7 @@ function Study({ s }) {
         .filter(o => !o.days || o.days.includes(dayDate.getDay()))
         .map((o, i) => (
           <Btn key={o.label} title={`${o.label}${s.duration > 0 && i === 0 ? ` · ${fmtDur(s.duration)}` : ''}`} icon="book" kind={i === 0 ? 'gold' : 'line'}
-            onPress={async () => { actions.start(s.id); try { await openAppAt(app, (o.path || 'index.html?go=1&min={min}') + prayerQuery, { wd: dayDate.getDay(), min: Math.max(1,Math.floor(s.duration||10)), end: toTime(s.plannedEnd) }); } catch (e) { fail(e); } }} />
+            onPress={async () => { actions.start(s.id); try { await openAppAt(app, (o.path || 'index.html?go=1&min={min}') + prayerQuery, { wd: dayDate.getDay(), min: Math.max(1,Math.floor(s.duration||10)), end: toTime(s.plannedEnd), prayers }); } catch (e) { fail(e); } }} />
         ))}
       <Btn title="סיימתי ללמוד" icon="check" kind="line" onPress={() => actions.done(s.id)} />
     </Actions>
