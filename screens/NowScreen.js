@@ -1,5 +1,5 @@
 // "עכשיו" — המסך המרכזי: רק התחנה הנוכחית, והעוגן הבא
-import { View, ScrollView, Alert } from 'react-native';
+import { View, ScrollView, Alert, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useDay } from '../lib/DayContext';
@@ -17,7 +17,7 @@ import Shortcuts from '../components/Shortcuts';
 import HomeEdit from '../components/HomeEdit';
 import { layoutOf } from '../lib/homeLayout';
 import Icon from '../components/Icon';
-import { nextFlight, fmtLeft } from '../lib/trips';
+import { nextFlight, OUTBOUND_MILESTONES } from '../lib/trips';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
 
@@ -63,6 +63,7 @@ export default function NowScreen({ go }) {
         <T v="small" c="sub">{showTopActions ? 'סגור' : 'פעולות'}</T>
       </Pressable>
     </View>
+    <FlightCountdown sec={sec} />
     {plan.nextAnchor && <View style={{ marginBottom: 6 }}><T v="tiny" c="sub" numberOfLines={1}>
       הבא: {plan.nextAnchor.title} · {toTime(plan.nextAnchor.time)}{plan.nextAnchor.late > 1 ? ` · איחור ${Math.round(plan.nextAnchor.late)} דק׳` : ''}
     </T></View>}
@@ -71,7 +72,6 @@ export default function NowScreen({ go }) {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
           <PlanChange /><LockPause />
         </View>
-        <FlightCountdown sec={sec} />
       </View>
     )}
   </>);
@@ -213,19 +213,58 @@ function BlockedSheet() {
   );
 }
 
-// ספירה לאחור לטיסה הבאה — מופיעה עד 21 יום לפני
-function FlightCountdown() {
+// כרטיס טיסה חי — שניות מתעדכנות באמצעות שעון המסך; לחיצה מציגה את כל אבני הדרך.
+function FlightCountdown({ sec }) {
   const t = useT();
+  const [open, setOpen] = useState(false);
   const nf = nextFlight();
   if (!nf || nf.ms > 21 * 864e5) return null;
-  const soon = nf.ms < 24 * 3600e3;
+  const ms = Math.max(0, nf.ms);
+  const total = Math.floor(ms / 1000);
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const mins = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  const digits = [hours, mins, seconds].map(v => String(v).padStart(2, '0')).join(':');
+  const events = nf.flight.id === 'ua85' ? OUTBOUND_MILESTONES : [
+    { at: nf.flight.at, title: 'המראה — ' + nf.flight.no }
+  ];
+  const formatTime = at => {
+    const d = new Date(at);
+    return d.toLocaleString('he-IL', { timeZone: nf.flight.id === 'ua85' ? 'Asia/Jerusalem' : 'America/New_York', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+  };
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm, backgroundColor: soon ? t.warnSoft : t.sunk,
-      borderRadius: R.md, paddingVertical: 8, paddingHorizontal: 12, marginBottom: SP.sm, alignSelf: 'flex-start' }}>
-      <Icon name="send" size={18} color={soon ? t.warn : t.gold} />
-      <T v="small" style={{ fontWeight: '800' }}>עד הטיסה: {fmtLeft(nf.ms)}</T>
-      <T v="tiny" c="sub">{nf.flight.no} · {nf.flight.label}</T>
-    </View>
+    <>
+      <Pressable onPress={() => setOpen(true)}
+        style={{ backgroundColor: t.navy, borderRadius: R.lg, paddingVertical: 12, paddingHorizontal: 16, marginBottom: SP.md, marginTop: SP.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
+          <Icon name="send" size={22} color={t.gold} />
+          <View style={{ flex: 1 }}>
+            <T v="tiny" style={{ color: t.onNavy }}>עד ההמראה · {nf.flight.no}</T>
+            <T v="h2" style={{ color: t.onNavy, marginTop: 2, fontVariant: ['tabular-nums'] }}>
+              {days ? days + ' ימים  ' : ''}{digits}
+            </T>
+            <T v="tiny" style={{ color: t.onNavy }}>{nf.flight.label} · לחץ לציר הזמנים</T>
+          </View>
+          <Icon name="chevron-left" size={20} color={t.gold} />
+        </View>
+      </Pressable>
+      <Sheet visible={open} onClose={() => setOpen(false)} title="עד ההמראה — ציר הזמנים">
+        <ScrollView style={{ maxHeight: 500 }}>
+          <T v="small" c="sub">התוכנית מתעדכנת עם הזמן. הזמנים מתוכננים לפי סדר הנסיעה, ולא נתוני טיסה חיים.</T>
+          {events.map((event, i) => (
+            <View key={i} style={{ flexDirection: 'row', gap: SP.sm, paddingVertical: 12, borderBottomWidth: 1, borderColor: t.hair, opacity: event.at < Date.now() ? 0.5 : 1 }}>
+              <Icon name={event.at < Date.now() ? 'check' : 'clock'} size={18} color={event.at < Date.now() ? t.sub : t.gold} />
+              <View style={{ flex: 1 }}>
+                <T v="bodyB">{event.title}</T>
+                <T v="small" c="sub">{formatTime(event.at)}{event.note ? ' · ' + event.note : ''}</T>
+              </View>
+              {event.at > Date.now() && <T v="tiny" c="sub">{Math.ceil((event.at - Date.now()) / 60000)} דק׳</T>}
+            </View>
+          ))}
+        </ScrollView>
+      </Sheet>
+    </>
   );
 }
 
