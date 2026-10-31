@@ -6,7 +6,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Ring, Chip, Sheet, Field } from '../components/UI';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { appLabel } from '../lib/native';
 import * as Native from '../lib/native';
 import LockPause from '../components/LockPause';
@@ -18,7 +18,10 @@ import Shortcuts from '../components/Shortcuts';
 import HomeEdit from '../components/HomeEdit';
 import { layoutOf } from '../lib/homeLayout';
 import Icon from '../components/Icon';
-import { nextFlight, fmtLeft, OUTBOUND_MILESTONES } from '../lib/trips';
+import { nextFlight, fmtLeft, wakeTimeFor } from '../lib/trips';
+import { planDay } from '../lib/engine';
+import { getZmanim } from '../lib/zmanim';
+import * as Store from '../lib/store';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
 
@@ -65,7 +68,7 @@ export default function NowScreen({ go }) {
         <T v="small" c="sub">{showTopActions ? 'סגור' : 'פעולות'}</T>
       </Pressable>
     </View>
-    <FlightCountdown sec={sec} />
+    <FlightCountdown sec={sec} plan={plan} state={state} settings={eff} dayDate={dayDate} now={now} zmanim={zmanim} />
     {plan.nextAnchor && <View style={{ marginBottom: 6 }}><T v="tiny" c="sub" numberOfLines={1}>
       הבא: {plan.nextAnchor.title} · {toTime(plan.nextAnchor.time)}{plan.nextAnchor.late > 1 ? ` · איחור ${Math.round(plan.nextAnchor.late)} דק׳` : ''}
     </T></View>}
@@ -216,11 +219,53 @@ function BlockedSheet() {
   );
 }
 
-// כרטיס טיסה חי — שניות מתעדכנות באמצעות שעון המסך; לחיצה מציגה את כל אבני הדרך.
-function FlightCountdown({ sec }) {
+// כרטיס טיסה חי — לחיצה מציגה את *סדר היום עצמו*, ולא רשימת אבני דרך סטטית.
+// ימי העתיד נטענים מאותו מנוע תכנון ומאותו אחסון כמו מסך היום.
+function FlightCountdown({ sec, plan, state, settings, dayDate, now, zmanim }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const [daysPlan, setDaysPlan] = useState([]);
+  const [loadingDays, setLoadingDays] = useState(false);
+  const [daysError, setDaysError] = useState('');
   const nf = nextFlight();
+  const outbound = nf?.flight?.id === 'ua85';
+  const flightAt = outbound ? new Date(2026, 10, 3, 11, 30) : null;
+
+  useEffect(() => {
+    if (!open || !outbound || !flightAt) return;
+    let cancelled = false;
+    async function loadTimeline() {
+      setLoadingDays(true);
+      setDaysError('');
+      try {
+        const first = new Date();
+        first.setHours(12, 0, 0, 0);
+        const end = new Date(2026, 10, 3, 12);
+        const dates = [];
+        for (let d = new Date(first), count = 0; d <= end && count < 8; d.setDate(d.getDate() + 1), count++) {
+          dates.push(new Date(d));
+        }
+        const result = await Promise.all(dates.map(async d => {
+          const key = dateKeyLocal(d);
+          const isToday = key === dateKeyLocal(dayDate);
+          if (isToday) return { key, date: d, list: plan?.list || [], today: true };
+          const saved = await Store.loadDay(key);
+          const z = await getZmanim(d).catch(() => ({}));
+          const daySettings = { ...settings, wakeTime: wakeTimeFor(settings, d) };
+          const agenda = planDay({ settings: daySettings, date: d, state: saved, zmanim: z || {}, now: 0 });
+          return { key, date: d, list: agenda?.list || [], today: false };
+        }));
+        if (!cancelled) setDaysPlan(result);
+      } catch (e) {
+        if (!cancelled) setDaysError(String(e?.message || e));
+      } finally {
+        if (!cancelled) setLoadingDays(false);
+      }
+    }
+    loadTimeline();
+    return () => { cancelled = true; };
+  }, [open, outbound, settings, dayDate, plan, state, zmanim]);
+
   if (!nf || nf.ms > 21 * 864e5) return null;
   const ms = Math.max(0, nf.ms);
   const total = Math.floor(ms / 1000);
@@ -229,13 +274,19 @@ function FlightCountdown({ sec }) {
   const mins = Math.floor((total % 3600) / 60);
   const seconds = total % 60;
   const digits = [hours, mins, seconds].map(v => String(v).padStart(2, '0')).join(':');
-  const events = nf.flight.id === 'ua85' ? OUTBOUND_MILESTONES : [
-    { at: nf.flight.at, title: 'המראה — ' + nf.flight.no }
-  ];
-  const formatTime = at => {
-    const d = new Date(at);
-    return d.toLocaleString('he-IL', { timeZone: nf.flight.id === 'ua85' ? 'Asia/Jerusalem' : 'America/New_York', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
-  };
+  const flightLimit = 11 * 60 + 30;
+  const formatDate = d => 'יום ' + DAY_NAMES[d.getDay()] + ' · ' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+  const visibleDays = daysPlan.map(d => ({
+    ...d,
+    list: d.list.filter(s => {
+      if (s.status === 'auto' || s.status === 'skipped') return false;
+      if (d.today && Number.isFinite(s.plannedEnd) && s.plannedEnd < nowMinutes && s.status !== 'current') return false;
+      if (d.key === '2026-11-03' && Number.isFinite(s.plannedStart) && s.plannedStart >= flightLimit) return false;
+      return true;
+    })
+  })).filter(d => d.list.length);
+
   return (
     <>
       <Pressable onPress={() => setOpen(true)}
@@ -247,24 +298,59 @@ function FlightCountdown({ sec }) {
             <T v="h2" style={{ color: t.onNavy, marginTop: 2, fontVariant: ['tabular-nums'] }}>
               {days ? days + ' ימים  ' : ''}{digits}
             </T>
-            <T v="tiny" style={{ color: t.onNavy }}>{nf.flight.label} · לחץ לציר הזמנים</T>
+            <T v="tiny" style={{ color: t.onNavy }}>{nf.flight.label} · לחץ לסדר היום עד הטיסה</T>
           </View>
           <Icon name="chevron-left" size={20} color={t.gold} />
         </View>
       </Pressable>
-      <Sheet visible={open} onClose={() => setOpen(false)} title="עד ההמראה — ציר הזמנים">
-        <ScrollView style={{ maxHeight: 500 }}>
-          <T v="small" c="sub">התוכנית מתעדכנת עם הזמן. הזמנים מתוכננים לפי סדר הנסיעה, ולא נתוני טיסה חיים.</T>
-          {events.map((event, i) => (
-            <View key={i} style={{ flexDirection: 'row', gap: SP.sm, paddingVertical: 12, borderBottomWidth: 1, borderColor: t.hair, opacity: event.at < Date.now() ? 0.5 : 1 }}>
-              <Icon name={event.at < Date.now() ? 'check' : 'clock'} size={18} color={event.at < Date.now() ? t.sub : t.gold} />
-              <View style={{ flex: 1 }}>
-                <T v="bodyB">{event.title}</T>
-                <T v="small" c="sub">{formatTime(event.at)}{event.note ? ' · ' + event.note : ''}</T>
+      <Sheet visible={open} onClose={() => setOpen(false)} title={outbound ? 'כל סדר היום עד הטיסה' : 'הטיסה הבאה'}>
+        <ScrollView style={{ maxHeight: 540 }} nestedScrollEnabled>
+          {outbound ? <>
+            <T v="small" c="sub" style={{ marginBottom: SP.sm }}>
+              כל התחנות המתוכננות מעכשיו ועד להמראה ביום שלישי 3.11, כולל לימוד, תפילות, סידורים, הכנות ונסיעות. שעות משוערות עשויות להשתנות בהתאם להתקדמות.
+            </T>
+            {loadingDays && <T v="small" c="sub">טוען את סדר היום…</T>}
+            {!!daysError && <T v="small" style={{ color: t.warn }}>לא הצלחתי לטעון את כל הימים: {daysError}</T>}
+            {!loadingDays && visibleDays.map(day => (
+              <View key={day.key} style={{ marginBottom: SP.md }}>
+                <View style={{ backgroundColor: t.sunk, padding: SP.sm, borderRadius: R.md, marginVertical: SP.sm }}>
+                  <T v="bodyB">{formatDate(day.date)}{day.today ? ' · מהעכשיו' : ''}</T>
+                </View>
+                {day.list.map((s, i) => {
+                  const completed = s.status === 'done' || s.rec?.status === 'done';
+                  const start = Number.isFinite(s.plannedStart) ? toTime(s.plannedStart) : '';
+                  const finish = Number.isFinite(s.plannedEnd) && s.duration > 0 ? toTime(s.plannedEnd) : '';
+                  return (
+                    <View key={s.id + ':' + i} style={{ flexDirection: 'row', gap: SP.sm, paddingVertical: 9, borderBottomWidth: 1, borderColor: t.hair, opacity: completed ? 0.6 : 1 }}>
+                      <Icon name={completed ? 'check' : s.status === 'current' ? 'play' : 'clock'} size={16} color={completed ? t.sub : t.gold} />
+                      <View style={{ flex: 1 }}>
+                        <T v="bodyB">{s.title || 'תחנה ללא כותרת'}{completed ? ' ✓' : ''}</T>
+                        {!!s.sub && <T v="small" c="sub">{s.sub}</T>}
+                        {Array.isArray(s.items) && s.items.map((item, n) => (
+                          <T key={n} v="small" c="sub">• {typeof item === 'string' ? item : (item?.label || item?.title || '')}</T>
+                        ))}
+                        {Array.isArray(s.steps) && s.steps.map((step, n) => (
+                          <T key={'step:' + n} v="small" c="sub">• {step.label || step.title || step.id}</T>
+                        ))}
+                      </View>
+                      <T v="tiny" c="sub" style={{ minWidth: 45, textAlign: 'left' }}>
+                        {start}{finish && finish !== start ? '–' + finish : ''}
+                      </T>
+                    </View>
+                  );
+                })}
               </View>
-              {event.at > Date.now() && <T v="tiny" c="sub">{fmtLeft(event.at - Date.now())}</T>}
+            ))}
+            {!loadingDays && !daysError && !visibleDays.length && <T v="small" c="sub">אין תחנות נוספות לפני ההמראה.</T>}
+            <View style={{ backgroundColor: t.goldSoft, padding: SP.md, borderRadius: R.md, marginTop: SP.sm }}>
+              <T v="bodyB">✈ יום שלישי 3.11 · 11:30 — המראה UA 85</T>
             </View>
-          ))}
+          </> : (
+            <View style={{ padding: SP.md }}>
+              <T v="bodyB">{nf.flight.no} · {nf.flight.label}</T>
+              <T v="small" c="sub">מועד ההמראה מופיע לפי כרטיס הטיסה, אינו מעקב חי.</T>
+            </View>
+          )}
         </ScrollView>
       </Sheet>
     </>
