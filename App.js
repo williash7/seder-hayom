@@ -22,7 +22,7 @@ const TABS = [
   { k: 'now', icon: 'now', label: 'עכשיו' },
   { k: 'day', icon: 'day', label: 'היום' },
   { k: 'apps', icon: 'grid', label: 'אפליקציות' },
-  { k: 'tools', icon: 'layout-grid', label: 'כלים' },
+  { k: 'tools', icon: 'box', label: 'כלים' },
   { k: 'settings', icon: 'settings', label: 'הגדרות' },
 ];
 
