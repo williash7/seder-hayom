@@ -7,6 +7,11 @@
   <uses-permission android:name="android.permission.VIBRATE" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+  <queries>
+    <package android:name="org.chabadbaaliya.kesher" />
+    <provider android:authorities="org.chabadbaaliya.kesher.sync" />
+  </queries>
+
   <application>
     <activity
       android:name="expo.modules.sedernative.AlarmActivity"
