@@ -6,7 +6,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Ring, Chip, Sheet, Field } from '../components/UI';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { appLabel } from '../lib/native';
 import * as Native from '../lib/native';
 import LockPause from '../components/LockPause';
@@ -229,15 +229,20 @@ function FlightCountdown({ sec, plan, state, settings, dayDate, now, zmanim }) {
   const [daysError, setDaysError] = useState('');
   const nf = nextFlight();
   const outbound = nf?.flight?.id === 'ua85';
-  const flightAt = outbound ? new Date(2026, 10, 3, 11, 30) : null;
+  // The live clock re-renders this card each second. Do not treat a freshly
+  // calculated plan as a signal to reload the sheet and reset its scroll.
+  const latest = useRef({ plan, settings, dayDate });
+  latest.current = { plan, settings, dayDate };
+  const calendarKey = dateKeyLocal(new Date());
 
   useEffect(() => {
-    if (!open || !outbound || !flightAt) return;
+    if (!open || !outbound) return;
     let cancelled = false;
     async function loadTimeline() {
       setLoadingDays(true);
       setDaysError('');
       try {
+        const { plan: activePlan, settings: activeSettings, dayDate: activeDate } = latest.current;
         const first = new Date();
         first.setHours(12, 0, 0, 0);
         const end = new Date(2026, 10, 3, 12);
@@ -247,11 +252,11 @@ function FlightCountdown({ sec, plan, state, settings, dayDate, now, zmanim }) {
         }
         const result = await Promise.all(dates.map(async d => {
           const key = dateKeyLocal(d);
-          const isToday = key === dateKeyLocal(dayDate);
-          if (isToday) return { key, date: d, list: plan?.list || [], today: true };
+          const isToday = key === dateKeyLocal(activeDate);
+          if (isToday) return { key, date: d, list: activePlan?.list || [], today: true };
           const saved = await Store.loadDay(key);
           const z = await getZmanim(d).catch(() => ({}));
-          const daySettings = { ...settings, wakeTime: wakeTimeFor(settings, d) };
+          const daySettings = { ...activeSettings, wakeTime: wakeTimeFor(activeSettings, d) };
           const agenda = planDay({ settings: daySettings, date: d, state: saved, zmanim: z || {}, now: 0 });
           return { key, date: d, list: agenda?.list || [], today: false };
         }));
@@ -264,7 +269,7 @@ function FlightCountdown({ sec, plan, state, settings, dayDate, now, zmanim }) {
     }
     loadTimeline();
     return () => { cancelled = true; };
-  }, [open, outbound, settings, dayDate, plan, state, zmanim]);
+  }, [open, outbound, calendarKey]);
 
   if (!nf || nf.ms > 21 * 864e5) return null;
   const ms = Math.max(0, nf.ms);
