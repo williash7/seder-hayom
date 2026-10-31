@@ -15,6 +15,7 @@ import CatchUp from '../components/CatchUp';
 import Widgets from '../components/Widgets';
 import Dock from '../components/Dock';
 import Shortcuts from '../components/Shortcuts';
+import KesherCard from '../components/KesherCard';
 import HomeEdit from '../components/HomeEdit';
 import { layoutOf } from '../lib/homeLayout';
 import Icon from '../components/Icon';
@@ -85,6 +86,7 @@ export default function NowScreen({ go }) {
       contentContainerStyle={{ padding: SP.xl, paddingTop: ins.top + SP.lg, paddingBottom: layoutOf(settings).hidden.includes('dock') ? 120 : 24 }}
       keyboardShouldPersistTaps="handled">
       {header}
+      <KesherCard />
       <LearningSummary data={learnSync} settings={settings} plan={plan} state={state} />
       {body}
       {layoutOf(settings).order.filter(k => !layoutOf(settings).hidden.includes(k)).map(k => (k === 'shortcuts' ? <Shortcuts key={k} /> : k === 'widgets' ? <Widgets key={k} /> : null))}

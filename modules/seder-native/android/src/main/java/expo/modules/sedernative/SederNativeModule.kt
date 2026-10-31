@@ -35,6 +35,38 @@ class SederNativeModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("SederNative")
 
+    // קשר — URI קבוע, סיכומים ומשימות בלבד. הרשאת הקריאה ניתנת בתוך קשר.
+    AsyncFunction("readKesherSnapshot") {
+      val uri = Uri.parse("content://org.chabadbaaliya.kesher.sync/v1/snapshot")
+      val provider = ctx.packageManager.resolveContentProvider(uri.authority!!, 0)
+      if (provider == null || provider.packageName != "org.chabadbaaliya.kesher") {
+        mapOf("status" to "missing_app")
+      } else try {
+        val payload = ctx.contentResolver.query(uri, arrayOf("payload"), null, null, null)?.use { cursor ->
+          if (cursor.moveToFirst()) cursor.getString(cursor.getColumnIndexOrThrow("payload")) else null
+        }
+        if (payload != null && payload.length <= 500000) mapOf("status" to "ok", "json" to payload)
+        else mapOf("status" to "error")
+      } catch (_: SecurityException) {
+        mapOf("status" to "not_connected")
+      } catch (_: Exception) {
+        mapOf("status" to "error")
+      }
+    }
+    Function("openKesher") { mode: String ->
+      val action = when (mode) {
+        "sync" -> "org.chabadbaaliya.kesher.OPEN_SYNC"
+        "tasks" -> "org.chabadbaaliya.kesher.OPEN_TASKS"
+        else -> Intent.ACTION_MAIN
+      }
+      try {
+        ctx.startActivity(Intent(action).setComponent(ComponentName("org.chabadbaaliya.kesher", "org.chabadbaaliya.kesher.MainActivity"))
+          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+      } catch (_: Exception) { false }
+    }
+
+
     // ── שעון מעורר ──
     Function("scheduleAlarm") { atMs: Double, title: String, body: String ->
       AlarmScheduler.schedule(ctx, atMs.toLong(), title, body)
