@@ -40,11 +40,15 @@ export default function UpdateButton() {
   }, []);
 
   const [ota, setOta] = useState('');
+  const updateInfo = () => {
+    const time = Updates.createdAt instanceof Date ? Updates.createdAt.toLocaleString('he-IL') : 'לא זמין';
+    return `מסלול: ${Updates.channel || 'לא ידוע'} · תאימות: ${Updates.runtimeVersion || 'לא ידועה'} · עדכון פעיל: ${Updates.updateId ? String(Updates.updateId).slice(0,8) : 'מובנה בהתקנה'} · תאריך: ${time}`;
+  };
   const checkOta = async () => {
     try {
       setOta('בודק…');
       const r = await Updates.checkForUpdateAsync();
-      if (!r.isAvailable) { setOta('אין עדכון מהיר חדש ✓'); return; }
+      if (!r.isAvailable) { setOta('לא הוצע עדכון חדש למסלול ההתקנה הזה. ' + updateInfo() + '. אם ציפית לעדכון אחר, ייתכן שההתקנה פועלת במסלול תאימות שונה.'); return; }
       setOta('מוריד עדכון…');
       await Updates.fetchUpdateAsync();
       setOta('מתעדכן…');
@@ -109,7 +113,8 @@ export default function UpdateButton() {
           </T>
           <Btn title="בדוק עדכון מהיר" icon="undo" kind="line" onPress={checkOta} />
           <Btn title="הפעל מחדש את האפליקציה" icon="undo" kind="line" onPress={restartApp} />
-          {!!ota && <T v="small" c="sub">{ota}</T>}
+          {!!ota && <T v="small" c="sub">{ota}</T>
+          <T v="tiny" c="sub">{updateInfo()}</T>}
           {hasNew && <Btn title="להתקין את הגרסה החדשה" icon="fwd" kind="gold" onPress={() => go(RELEASES)} />}
           {!!shot && (
             <View style={{ flexDirection: 'row', gap: SP.md, alignItems: 'center' }}>
