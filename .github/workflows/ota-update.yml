@@ -25,6 +25,8 @@ jobs:
       - run: npm ci
       - name: בדיקת מנוע היום
         run: node scripts/check-engine.js
+      - name: בדיקת חיבור קשר
+        run: node scripts/check-kesher.js
       - name: אימות הגדרות פרסום
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
