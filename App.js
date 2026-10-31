@@ -1,5 +1,5 @@
-import { Component, useEffect, useState } from 'react';
-import { View, Text, Pressable, I18nManager, ScrollView, Share, BackHandler } from 'react-native';
+import { Component, useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, I18nManager, ScrollView, Share, BackHandler, PanResponder } from 'react-native';
 import * as Native from './lib/native';
 import { StatusBar } from 'expo-status-bar';
 import * as Updates from 'expo-updates';
@@ -20,9 +20,9 @@ try { I18nManager.allowRTL(true); I18nManager.forceRTL(true); } catch {}
 
 const TABS = [
   { k: 'now', icon: 'now', label: 'עכשיו' },
+  { k: 'tools', icon: 'box', label: 'כלים' },
   { k: 'day', icon: 'day', label: 'היום' },
   { k: 'apps', icon: 'grid', label: 'אפליקציות' },
-  { k: 'tools', icon: 'box', label: 'כלים' },
   { k: 'settings', icon: 'settings', label: 'הגדרות' },
 ];
 
@@ -30,16 +30,23 @@ function TabBar({ tab, setTab }) {
   const t = useT();
   const ins = useSafeAreaInsets();
   return (
-    <View style={{ position: 'absolute', left: 16, right: 16, bottom: ins.bottom + 12,
-      backgroundColor: t.navy, borderRadius: R.pill, flexDirection: 'row', padding: 6,
+    <View style={{ position: 'absolute', left: 14, right: 14, bottom: ins.bottom + 10,
+      backgroundColor: t.navy, borderRadius: 28, flexDirection: 'row', padding: 5,
       shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8 }}>
       {TABS.map(x => {
         const on = tab === x.k;
         return (
-          <Pressable key={x.k} onPress={() => setTab(x.k)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center',
-            flexDirection: 'row', gap: 6, paddingVertical: 11, borderRadius: R.pill, backgroundColor: on ? t.gold : 'transparent' }}>
-            <Icon name={x.icon} size={18} color={on ? '#fff' : t.onNavy} />
-            {on && <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{x.label}</Text>}
+          <Pressable key={x.k} onPress={() => setTab(x.k)}
+            accessibilityRole="tab" accessibilityState={{ selected: on }}
+            style={({ pressed }) => ({ flex: 1, minWidth: 0, height: 56, alignItems: 'center', justifyContent: 'center',
+              gap: 2, borderRadius: 23, backgroundColor: on ? t.gold : 'transparent',
+              opacity: pressed ? 0.7 : 1 })}>
+            <Icon name={x.icon} size={21} color={on ? '#fff' : t.onNavy} />
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}
+              style={{ color: on ? '#fff' : t.onNavy, fontWeight: on ? '800' : '600',
+                fontSize: 11, textAlign: 'center', includeFontPadding: false }}>
+              {x.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -49,6 +56,21 @@ function TabBar({ tab, setTab }) {
 
 function Main() {
   const [tab, setTab] = useState('now');
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  // Swipe horizontally across pages; vertical ScrollViews remain in control of vertical gestures.
+  // On an RTL layout, swiping left from the home screen opens the next tab (כלים).
+  const swipe = useRef(PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (_, g) =>
+      Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
+    onPanResponderTerminationRequest: () => true,
+    onPanResponderRelease: (_, g) => {
+      if (Math.abs(g.dx) < 65 || Math.abs(g.dx) < Math.abs(g.dy) * 1.5) return;
+      const current = TABS.findIndex(x => x.k === tabRef.current);
+      const next = current + (g.dx < 0 ? 1 : -1);
+      if (next >= 0 && next < TABS.length) setTab(TABS[next].k);
+    },
+  })).current;
   const { blocked } = useDay();
   // אפליקציה נחסמה — עוברים ל"עכשיו", שם שואלים בשביל מה
   useEffect(() => { if (blocked) setTab('now'); }, [blocked]);
@@ -64,7 +86,7 @@ function Main() {
     return () => clearTimeout(h);
   }, []);
   return (
-    <View style={{ flex: 1, backgroundColor: t.bg }}>
+    <View style={{ flex: 1, backgroundColor: t.bg }} {...swipe.panHandlers}>
       <StatusBar style={t.mode === 'dark' ? 'light' : 'dark'} />
       {!I18nManager.isRTL && (
         <View style={{ backgroundColor: t.goldSoft, padding: 12, paddingTop: 48 }}>
