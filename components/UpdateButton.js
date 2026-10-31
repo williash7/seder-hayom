@@ -113,8 +113,8 @@ export default function UpdateButton() {
           </T>
           <Btn title="בדוק עדכון מהיר" icon="undo" kind="line" onPress={checkOta} />
           <Btn title="הפעל מחדש את האפליקציה" icon="undo" kind="line" onPress={restartApp} />
-          {!!ota && <T v="small" c="sub">{ota}</T>
-          <T v="tiny" c="sub">{updateInfo()}</T>}
+          {!!ota && <T v="small" c="sub">{ota}</T>}
+          <T v="tiny" c="sub">{updateInfo()}</T>
           {hasNew && <Btn title="להתקין את הגרסה החדשה" icon="fwd" kind="gold" onPress={() => go(RELEASES)} />}
           {!!shot && (
             <View style={{ flexDirection: 'row', gap: SP.md, alignItems: 'center' }}>
