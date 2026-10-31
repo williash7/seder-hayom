@@ -1,5 +1,5 @@
 import { Component, useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, I18nManager, ScrollView, Share, BackHandler, PanResponder } from 'react-native';
+import { View, Text, Pressable, I18nManager, ScrollView, Share, BackHandler, PanResponder, Animated, useWindowDimensions } from 'react-native';
 import * as Native from './lib/native';
 import { StatusBar } from 'expo-status-bar';
 import * as Updates from 'expo-updates';
@@ -55,38 +55,109 @@ function TabBar({ tab, setTab }) {
 }
 
 function Main() {
+  const t = useT();
+  const { width } = useWindowDimensions();
+  const widthRef = useRef(width);
+  widthRef.current = width;
   const [tab, setTab] = useState('now');
   const tabRef = useRef(tab);
   tabRef.current = tab;
-  // Swipe horizontally across pages; vertical ScrollViews remain in control of vertical gestures.
-  // On an RTL layout, swiping left from the home screen opens the next tab (כלים).
+  const [incoming, setIncoming] = useState(null);
+  const incomingRef = useRef(null);
+  const signRef = useRef(0);
+  const movingRef = useRef(false);
+  const offset = useRef(new Animated.Value(0)).current;
+
+  // Both pages are mounted during a gesture so the neighboring page visibly
+  // follows the finger. The bottom navigation and its controls stay stationary.
+  const finish = target => {
+    const next = incomingRef.current;
+    if (!next || movingRef.current) return;
+    movingRef.current = true;
+    Animated.timing(offset, {
+      toValue: target ? signRef.current * widthRef.current : 0,
+      duration: target ? 180 : 150,
+      useNativeDriver: true,
+    }).start(() => {
+      if (target) {
+        tabRef.current = next;
+        setTab(next);
+      }
+      offset.setValue(0);
+      incomingRef.current = null;
+      signRef.current = 0;
+      setIncoming(null);
+      movingRef.current = false;
+    });
+  };
+  const navigate = next => {
+    if (movingRef.current || incomingRef.current || next === tabRef.current ||
+        !TABS.some(x => x.k === next)) return;
+    const before = TABS.findIndex(x => x.k === tabRef.current);
+    const after = TABS.findIndex(x => x.k === next);
+    signRef.current = after > before ? -1 : 1;
+    incomingRef.current = next;
+    setIncoming(next);
+    offset.setValue(0);
+    finish(true);
+  };
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+
   const swipe = useRef(PanResponder.create({
-    onMoveShouldSetPanResponderCapture: (_, g) =>
-      Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
+    onMoveShouldSetPanResponder: (_, g) =>
+      !movingRef.current && Math.abs(g.dx) > 22 && Math.abs(g.dx) > Math.abs(g.dy) * 1.7,
     onPanResponderTerminationRequest: () => true,
+    onPanResponderMove: (_, g) => {
+      if (movingRef.current) return;
+      const sign = g.dx < 0 ? -1 : 1;
+      if (!incomingRef.current) {
+        const i = TABS.findIndex(x => x.k === tabRef.current);
+        const neighbor = TABS[i + (sign < 0 ? 1 : -1)];
+        if (!neighbor) return;
+        signRef.current = sign;
+        incomingRef.current = neighbor.k;
+        setIncoming(neighbor.k);
+      }
+      // Do not reverse direction mid-gesture or attempt to drag beyond a tab edge.
+      if (sign === signRef.current) offset.setValue(g.dx);
+    },
     onPanResponderRelease: (_, g) => {
-      if (Math.abs(g.dx) < 65 || Math.abs(g.dx) < Math.abs(g.dy) * 1.5) return;
-      const current = TABS.findIndex(x => x.k === tabRef.current);
-      const next = current + (g.dx < 0 ? 1 : -1);
-      if (next >= 0 && next < TABS.length) setTab(TABS[next].k);
+      if (!incomingRef.current) return;
+      const forward = g.dx * signRef.current > 0 &&
+        (Math.abs(g.dx) > widthRef.current * 0.22 || Math.abs(g.vx) > 0.45);
+      finish(forward);
+    },
+    onPanResponderTerminate: () => {
+      if (incomingRef.current) finish(false);
     },
   })).current;
   const { blocked } = useDay();
-  // אפליקציה נחסמה — עוברים ל"עכשיו", שם שואלים בשביל מה
-  useEffect(() => { if (blocked) setTab('now'); }, [blocked]);
-  const t = useT();
-  // מסך הבית: "חזור" לא יוצא מהאפליקציה — חוזר ל"עכשיו"
+  useEffect(() => { if (blocked) navigateRef.current('now'); }, [blocked]);
   useEffect(() => {
-    const h = BackHandler.addEventListener('hardwareBackPress', () => { setTab('now'); return true; });
+    const h = BackHandler.addEventListener('hardwareBackPress', () => {
+      navigateRef.current('now');
+      return true;
+    });
     return () => h.remove();
   }, []);
   useEffect(() => {
-    // אתחול התראות אחרי שהמסך עלה — לא בזמן import
     const h = setTimeout(async () => { await initNotifications(); await askPermission(); }, 600);
     return () => clearTimeout(h);
   }, []);
+
+  const screen = key => {
+    switch (key) {
+      case 'now': return <NowScreen go={navigate} />;
+      case 'tools': return <ToolsScreen go={navigate} />;
+      case 'day': return <DayScreen go={navigate} />;
+      case 'apps': return <AppsScreen />;
+      case 'settings': return <SettingsScreen />;
+      default: return null;
+    }
+  };
   return (
-    <View style={{ flex: 1, backgroundColor: t.bg }} {...swipe.panHandlers}>
+    <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style={t.mode === 'dark' ? 'light' : 'dark'} />
       {!I18nManager.isRTL && (
         <View style={{ backgroundColor: t.goldSoft, padding: 12, paddingTop: 48 }}>
@@ -95,13 +166,22 @@ function Main() {
           </Text>
         </View>
       )}
-      {tab === 'now' && <NowScreen go={setTab} />}
-      {tab === 'day' && <DayScreen go={setTab} />}
-      {tab === 'settings' && <SettingsScreen go={setTab} />}
-      {tab === 'apps' && <AppsScreen />}
-      {tab === 'tools' && <ToolsScreen go={setTab} />}
+      <View style={{ flex: 1, overflow: 'hidden' }} {...swipe.panHandlers}>
+        <Animated.View style={{ flex: 1, transform: [{ translateX: offset }] }}>
+          {screen(tab)}
+        </Animated.View>
+        {incoming && (
+          <Animated.View pointerEvents="none" style={{
+            position: 'absolute', top: 0, bottom: 0, left: 0, width: width,
+            backgroundColor: t.bg,
+            transform: [{ translateX: Animated.add(offset, signRef.current * width) }],
+          }}>
+            {screen(incoming)}
+          </Animated.View>
+        )}
+      </View>
       <UpdateButton />
-      <TabBar tab={tab} setTab={setTab} />
+      <TabBar tab={incoming || tab} setTab={navigate} />
     </View>
   );
 }
