@@ -13,6 +13,7 @@ import NowScreen from './screens/NowScreen';
 import DayScreen from './screens/DayScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import AppsScreen from './screens/AppsScreen';
+import ToolsScreen from './screens/ToolsScreen';
 
 // עברית מימין לשמאל — נכנס לתוקף מהפתיחה השנייה
 try { I18nManager.allowRTL(true); I18nManager.forceRTL(true); } catch {}
@@ -21,6 +22,7 @@ const TABS = [
   { k: 'now', icon: 'now', label: 'עכשיו' },
   { k: 'day', icon: 'day', label: 'היום' },
   { k: 'apps', icon: 'grid', label: 'אפליקציות' },
+  { k: 'tools', icon: 'layout-grid', label: 'כלים' },
   { k: 'settings', icon: 'settings', label: 'הגדרות' },
 ];
 
@@ -75,6 +77,7 @@ function Main() {
       {tab === 'day' && <DayScreen go={setTab} />}
       {tab === 'settings' && <SettingsScreen go={setTab} />}
       {tab === 'apps' && <AppsScreen />}
+      {tab === 'tools' && <ToolsScreen go={setTab} />}
       <UpdateButton />
       <TabBar tab={tab} setTab={setTab} />
     </View>
