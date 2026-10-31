@@ -60,6 +60,8 @@ jobs:
 
       - name: בדיקת מנוע היום
         run: node scripts/check-engine.js
+      - name: בדיקת חיבור קשר
+        run: node scripts/check-kesher.js
 
       - name: יצירת תיקיית android
         run: npx expo prebuild --platform android --no-install --clean
