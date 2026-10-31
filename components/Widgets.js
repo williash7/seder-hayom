@@ -22,21 +22,21 @@ export default function Widgets() {
   settingsRef.current = settings;
   const save = next => actions.saveSettings({ ...settingsRef.current, widgets: next });
 
-  const finish = (id, h) => {
+  const finish = (id, h, label = '') => {
     const st = Native.widgetState(id);
     if (!st?.bound) return false;
     if (st.configure) Native.configureWidget(id);
-    save([...(settingsRef.current.widgets || []), { id, h: Math.max(64, h || st.h || 100), half: false }]);
+    save([...(settingsRef.current.widgets || []), { id, h: Math.max(64, h || st.h || 100), half: false, collapsed: false, label }]);
     setMsg('');
     return true;
   };
 
   // ממתינים לאישור של המערכת: בודקים כל חצי שנייה עד שהווידג'ט נקשר (עד שתי דקות).
   // לא מוחקים בחזרה לאפליקציה — החלון של המערכת יכול לגרום ל"חזרה" לפני שבחרת.
-  const waitBind = (id, h, d = '') => {
+  const waitBind = (id, h, d = '', label = '') => {
     const t0 = Date.now();
     pending.current = setInterval(() => {
-      if (finish(id, h)) { clearInterval(pending.current); pending.current = null; return; }
+      if (finish(id, h, label)) { clearInterval(pending.current); pending.current = null; return; }
       if (Date.now() - t0 > 120000) {
         clearInterval(pending.current); pending.current = null;
         Native.deleteWidget(id); setMsg('המערכת לא אישרה את הווידג\'ט, או שהאישור לא הופיע' + d);
@@ -55,10 +55,10 @@ export default function Widgets() {
     Native.unlockFor(3);          // שהנעילה לא תחסום את חלון האישור של המערכת
     const r = Native.allocateWidget(p.provider);
     if (!r) { setMsg('הגרסה המותקנת ישנה — צריך להתקין את ה-APK החדש'); return; }
-    if (r.bound) { if (!finish(r.id, p.h)) setMsg('הווידג\'ט נקשר אבל לא נטען'); }
+    if (r.bound) { if (!finish(r.id, p.h, p.label)) setMsg('הווידג\'ט נקשר אבל לא נטען'); }
     else {
       const d = r.resolved === undefined ? '' : r.resolved === '' ? ' (לא נמצא חלון אישור במערכת)' : ` (${r.resolved})`;
-      setMsg('ממתין לאישור של המערכת…' + d); waitBind(r.id, p.h, d);
+      setMsg('ממתין לאישור של המערכת…' + d); waitBind(r.id, p.h, d, p.label);
     }
   };
 
@@ -94,6 +94,10 @@ export default function Widgets() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: SP.sm }}>
         {list.map(w => (
           <View key={w.id} style={{ width: w.half ? '48.5%' : '100%', marginBottom: SP.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 9, paddingVertical: 6, borderRadius: R.md, backgroundColor: t.sunk, marginBottom: 5 }}>
+              <T v="small" numberOfLines={1} style={{ flex: 1 }}>{w.label || 'אפליקציה מחוברת'}</T>
+              <Chip label={w.collapsed ? 'הרחב ⌄' : 'צמצם ⌃'} onPress={() => change(w.id, { collapsed: !w.collapsed })} />
+            </View>
             {edit && (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
                 <Chip label="גדול" onPress={() => change(w.id, { h: w.h + 40 })} />
@@ -104,9 +108,11 @@ export default function Widgets() {
                 <Chip label="הסר" tone="warn" onPress={() => remove(w.id)} />
               </View>
             )}
-            <View style={{ height: w.h, borderRadius: R.md, overflow: 'hidden', backgroundColor: t.sunk }}>
-              {Native.WidgetView && <Native.WidgetView widgetId={w.id} style={{ flex: 1 }} />}
-            </View>
+            {!w.collapsed && (
+              <View style={{ height: w.h, borderRadius: R.md, overflow: 'hidden', backgroundColor: t.sunk }}>
+                {Native.WidgetView && <Native.WidgetView widgetId={w.id} style={{ flex: 1 }} />}
+              </View>
+            )}
           </View>
         ))}
       </View>
