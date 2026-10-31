@@ -68,7 +68,7 @@ function Main() {
   const movingRef = useRef(false);
   const offset = useRef(new Animated.Value(0)).current;
 
-  // Incoming page starts opposite to the direction of travel.
+  // In RTL, the next tab lies physically to the left in navigation order,\n  // so dragging right selects the next tab; the page itself follows the finger.\n  // Incoming page starts opposite to the direction of travel.
   // Both pages are mounted during a gesture so the neighboring page visibly
   // follows the finger. The bottom navigation and its controls stay stationary.
   const finish = target => {
@@ -96,7 +96,7 @@ function Main() {
         !TABS.some(x => x.k === next)) return;
     const before = TABS.findIndex(x => x.k === tabRef.current);
     const after = TABS.findIndex(x => x.k === next);
-    signRef.current = after > before ? -1 : 1;
+    signRef.current = after > before ? 1 : -1;
     incomingRef.current = next;
     setIncoming(next);
     offset.setValue(0);
@@ -114,7 +114,7 @@ function Main() {
       const sign = g.dx < 0 ? -1 : 1;
       if (!incomingRef.current) {
         const i = TABS.findIndex(x => x.k === tabRef.current);
-        const neighbor = TABS[i + (sign < 0 ? 1 : -1)];
+        const neighbor = TABS[i + (sign > 0 ? 1 : -1)];
         if (!neighbor) return;
         signRef.current = sign;
         incomingRef.current = neighbor.k;
