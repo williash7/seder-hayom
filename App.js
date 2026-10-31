@@ -68,7 +68,7 @@ function Main() {
   const movingRef = useRef(false);
   const offset = useRef(new Animated.Value(0)).current;
 
-  // In RTL, the next tab lies physically to the left in navigation order,\n  // so dragging right selects the next tab; the page itself follows the finger.\n  // Incoming page starts opposite to the direction of travel.
+  // Use physical X coordinates for page motion, independently of RTL layout.
   // Both pages are mounted during a gesture so the neighboring page visibly
   // follows the finger. The bottom navigation and its controls stay stationary.
   const finish = target => {
@@ -100,7 +100,8 @@ function Main() {
     incomingRef.current = next;
     setIncoming(next);
     offset.setValue(0);
-    finish(true);
+    // Let the neighboring page mount before starting the visual transition.
+    requestAnimationFrame(() => finish(true));
   };
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
@@ -167,14 +168,14 @@ function Main() {
           </Text>
         </View>
       )}
-      <View style={{ flex: 1, overflow: 'hidden' }} {...swipe.panHandlers}>
-        <Animated.View style={{ flex: 1, transform: [{ translateX: offset }] }}>
+      <View style={{ flex: 1, overflow: 'hidden', direction: 'ltr' }} {...swipe.panHandlers}>
+        <Animated.View style={{ flex: 1, direction: 'rtl', transform: [{ translateX: offset }] }}>
           {screen(tab)}
         </Animated.View>
         {incoming && (
           <Animated.View pointerEvents="none" style={{
-            position: 'absolute', top: 0, bottom: 0, left: 0, width: width,
-            backgroundColor: t.bg,
+            position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
+            backgroundColor: t.bg, direction: 'rtl',
             transform: [{ translateX: Animated.add(offset, -signRef.current * width) }],
           }}>
             {screen(incoming)}
