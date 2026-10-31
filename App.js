@@ -1,4 +1,4 @@
-import { Component, useEffect, useRef, useState } from 'react';
+import { Component, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, I18nManager, ScrollView, Share, BackHandler, PanResponder, Animated, useWindowDimensions } from 'react-native';
 import * as Native from './lib/native';
 import { StatusBar } from 'expo-status-bar';
@@ -66,7 +66,23 @@ function Main() {
   const incomingRef = useRef(null);
   const signRef = useRef(0);
   const movingRef = useRef(false);
+  const pendingCommitRef = useRef(false);
   const offset = useRef(new Animated.Value(0)).current;
+
+  // Keep the incoming page visible until React has committed the new active page.
+  // Removing it in the same callback as setTab used to expose the outgoing page
+  // while its native transform was still shifted a full screen off-screen.
+  useLayoutEffect(() => {
+    if (!pendingCommitRef.current) return;
+    requestAnimationFrame(() => {
+      offset.setValue(0);
+      incomingRef.current = null;
+      signRef.current = 0;
+      setIncoming(null);
+      pendingCommitRef.current = false;
+      movingRef.current = false;
+    });
+  }, [tab, offset]);
 
   // Use physical X coordinates for page motion, independently of RTL layout.
   // Both pages are mounted during a gesture so the neighboring page visibly
@@ -79,16 +95,24 @@ function Main() {
       toValue: target ? signRef.current * widthRef.current : 0,
       duration: target ? 180 : 150,
       useNativeDriver: true,
-    }).start(() => {
+    }).start(({ finished }) => {
+      if (!finished) {
+        movingRef.current = false;
+        return;
+      }
       if (target) {
+        // First commit the new page while the incoming overlay stays at x=0.
+        // useLayoutEffect removes that overlay only after the commit.
+        pendingCommitRef.current = true;
         tabRef.current = next;
         setTab(next);
+      } else {
+        offset.setValue(0);
+        incomingRef.current = null;
+        signRef.current = 0;
+        setIncoming(null);
+        movingRef.current = false;
       }
-      offset.setValue(0);
-      incomingRef.current = null;
-      signRef.current = 0;
-      setIncoming(null);
-      movingRef.current = false;
     });
   };
   const navigate = next => {
