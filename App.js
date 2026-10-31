@@ -68,7 +68,8 @@ function Main() {
   const movingRef = useRef(false);
   const offset = useRef(new Animated.Value(0)).current;
 
-  // Incoming page must start on the OPPOSITE side of travel; otherwise a\n  // rightward gesture pushes both pages right and the next page stays off-screen.\n  // Both pages are mounted during a gesture so the neighboring page visibly
+  // Incoming page starts opposite to the direction of travel.
+  // Both pages are mounted during a gesture so the neighboring page visibly
   // follows the finger. The bottom navigation and its controls stay stationary.
   const finish = target => {
     const next = incomingRef.current;
