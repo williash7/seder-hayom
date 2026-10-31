@@ -12,11 +12,8 @@ import * as Native from '../lib/native';
 import LockPause from '../components/LockPause';
 import PlanChange from '../components/PlanChange';
 import CatchUp from '../components/CatchUp';
-import Widgets from '../components/Widgets';
 import KesherCard from '../components/KesherCard';
 import Dock from '../components/Dock';
-import Shortcuts from '../components/Shortcuts';
-import HomeEdit from '../components/HomeEdit';
 import { layoutOf } from '../lib/homeLayout';
 import Icon from '../components/Icon';
 import { nextFlight, fmtLeft, wakeTimeFor } from '../lib/trips';
@@ -89,8 +86,9 @@ export default function NowScreen({ go }) {
       {body}
       <LearningSummary data={learnSync} settings={settings} plan={plan} state={state} />
       <KesherCard />
-      {layoutOf(settings).order.filter(k => !layoutOf(settings).hidden.includes(k)).map(k => (k === 'shortcuts' ? <Shortcuts key={k} /> : k === 'widgets' ? <Widgets key={k} /> : null))}
-      <HomeEdit />
+      <Pressable onPress={() => go('tools')} style={{ alignSelf: 'center', padding: SP.md, marginTop: SP.md }}>
+        <T v="small" c="sub">וידג׳טים וקיצורי אפליקציות — במסך כלים ›</T>
+      </Pressable>
     </ScrollView>
     {!layoutOf(settings).hidden.includes('dock') && <Dock />}
     <BlockedSheet />
@@ -180,7 +178,15 @@ export default function NowScreen({ go }) {
         <StationBody s={s} go={go} />
       </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SP.xxl }}>
+      {!s.at && !s.arriveBy && !s.protect && !s.fill && s.type !== 'prayer' && s.type !== 'close' && (
+        <View style={{ marginTop: SP.lg }}>
+          <Btn title="עבור הלאה · החזר להמשך היום" icon="skip" kind="line" small
+            onPress={() => {
+              if (!actions.deferStation(s.id)) Alert.alert('לא ניתן לדחות', 'אין מקום מתאים להחזיר את המשימה בהמשך היום.');
+            }} />
+        </View>
+      )}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SP.lg }}>
         <View style={{ flex: 1 }}>
           {next && <T v="small" c="sub">אחר כך: {next.title} · {toTime(next.plannedStart)}</T>}
         </View>
