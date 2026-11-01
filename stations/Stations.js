@@ -11,7 +11,7 @@ import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider, Sheet } from '../co
 import { fetchPeople, whoToCall, firstPhone, loadCallLog, logCall, toggleLater, PUBLIC_SHEET } from '../lib/callsApi';
 import * as Native from '../lib/native';
 import { fetchCrmTasks, crmDone, toggleCrmDone } from '../lib/crmTasks';
-import { weekLessons, loadPrep, savePrep } from '../lib/lessons';
+import { weekLessons, loadPrep, savePrep, loadWeekStates } from '../lib/lessons';
 import { loadSupplies, saveSupplies, menuFor } from '../lib/supplies';
 import Icon from '../components/Icon';
 import { TRIP_PLACES } from '../lib/trips';
@@ -859,11 +859,17 @@ function Home({ s }) {
 
 // ───────────── השיעורים השבוע — מופיע בכל זמן פנוי ─────────────
 export function LessonsWeek() {
-  const { settings, dayDate } = useDay();
+  const { settings, dayDate, state, dayKey } = useDay();
   const t = useT();
   const [prep, setPrep] = useState({});
+  const [weekStates, setWeekStates] = useState({});
   useEffect(() => { loadPrep().then(setPrep); }, []);
-  const list = weekLessons(settings, dayDate);
+  useEffect(() => {
+    let active = true;
+    loadWeekStates(dayDate).then(v => { if (active) setWeekStates(v); }).catch(() => {});
+    return () => { active = false; };
+  }, [dayKey, settings]);
+  const list = weekLessons(settings, dayDate, { ...weekStates, [dayKey]: state });
   if (!list.length) return null;
   const toggle = k => { const n = { ...prep, [k]: !prep[k] }; setPrep(n); savePrep(n); };
   const left = list.filter(l => !prep[l.key]).length;
