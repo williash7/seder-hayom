@@ -177,12 +177,10 @@ function CustomList({ s }) {
   const steps = (s.steps || []).filter(x => x.label?.trim());
   const marks = s.rec?.data?.steps || {};
   const checked = steps.filter(x => marks[x.id]).length;
-  const started = s.rec?.start != null;
   const toggle = step => {
-    if (!started) actions.start(s.id);
     const next = { ...marks };
     if (next[step.id]) delete next[step.id];
-    else next[step.id] = Date.now();
+    else next[step.id] = true;
     if (steps.every(x => next[x.id])) actions.done(s.id, { steps: next });
     else actions.setData(s.id, { steps: next });
   };
