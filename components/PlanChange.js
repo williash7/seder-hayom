@@ -67,7 +67,7 @@ export default function PlanChange() {
   const places = { ...(settings.places || {}), ...newPlaces };
   const start = k => { setListDraft(''); setListLines([]); setEdit({ k, title: '', minutes: k === 'study' ? 30 : k === 'stay' ? 20 : 10, free: '', time: '', place: null, name: '', address: '', drive: 10, driveFree: '' }); };
   const appendListLines = () => {
-    const lines = listDraft.split(/[\\n,،;]+/).map(x => x.trim()).filter(Boolean);
+    const lines = listDraft.split(/[\n,،;]+/).map(x => x.trim()).filter(Boolean);
     if (lines.length) setListLines(old => [...old, ...lines.map((label,i) => ({ id: 'step_' + Date.now() + '_' + i, label, minutes: 5 }))]);
     setListDraft('');
   };
@@ -80,7 +80,7 @@ export default function PlanChange() {
     const at = e.time.trim() ? e.time.trim().padStart(5, '0') : null;
     const extra = at ? { at } : {};
     if (e.k === 'custom_list') {
-      const lines = [...listLines, ...listDraft.split(/[\\n,،;]+/).map(x => x.trim()).filter(Boolean).map((label,i) => ({ id: 'step_' + Date.now() + '_' + i, label, minutes: 5 }))];
+      const lines = [...listLines, ...listDraft.split(/[\n,،;]+/).map(x => x.trim()).filter(Boolean).map((label,i) => ({ id: 'step_' + Date.now() + '_' + i, label, minutes: 5 }))];
       if (!e.title.trim() || !lines.length) return;
       setItems(l => [...l, { type: 'custom_list', title: e.title.trim(), icon: 'list', steps: lines, minutes: lines.reduce((sum,x) => sum + (Number(x.minutes)||0),0), ...extra }]);
       setListDraft(''); setListLines([]);
