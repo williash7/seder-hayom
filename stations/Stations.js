@@ -171,6 +171,40 @@ function Routine({ s }) {
   );
 }
 
+// ───────────── רשימת משימות חופשית, כתחנה אחת ─────────────
+function CustomList({ s }) {
+  const { actions } = useDay();
+  const steps = (s.steps || []).filter(x => x.label?.trim());
+  const marks = s.rec?.data?.steps || {};
+  const checked = steps.filter(x => marks[x.id]).length;
+  const started = s.rec?.start != null;
+  const toggle = step => {
+    if (!started) actions.start(s.id);
+    const next = { ...marks };
+    if (next[step.id]) delete next[step.id];
+    else next[step.id] = Date.now();
+    if (steps.every(x => next[x.id])) actions.done(s.id, { steps: next });
+    else actions.setData(s.id, { steps: next });
+  };
+  return (
+    <View>
+      <T v="bodyB" style={{ textAlign: 'center' }}>{checked} מתוך {steps.length} בוצעו</T>
+      <T v="small" c="sub" style={{ textAlign: 'center', marginBottom: SP.sm }}>
+        אפשר לסמן בכל סדר. ההתקדמות נשמרת אוטומטית.
+      </T>
+      {steps.map(x => (
+        <Check key={x.id} label={x.label} checked={!!marks[x.id]}
+          sub={marks[x.id] ? 'בוצע' : x.minutes ? `${x.minutes} דק׳` : undefined}
+          onPress={() => toggle(x)} />
+      ))}
+      <Actions>
+        <Btn title="סיימתי את הרשימה" icon="check" kind="ok"
+          onPress={() => actions.done(s.id, { steps: marks })} />
+      </Actions>
+    </View>
+  );
+}
+
 // ───────────── טקסט (ברכות השחר, ק״ש שעל המיטה) ─────────────
 function TextSt({ s, go }) {
   const { actions, settings, dayDate } = useDay();
@@ -947,7 +981,7 @@ function Open({ s }) {
 }
 
 const MAP = {
-  wake: Wake, routine: Routine, text: TextSt, checklist: Checklist, timer: Timer, drive: Drive,
+  wake: Wake, routine: Routine, custom_list: CustomList, text: TextSt, checklist: Checklist, timer: Timer, drive: Drive,
   minyan: Minyan, study: Study, prayer: Prayer, note: Note, camera: Camera, app: AppSt,
   open: Open, supplies: Supplies, shop: Shop, counter: Counter, tasks: Tasks, home: Home, plan: Plan, close: Close, sleep: Sleep, shabbat: Shabbat,
 };
