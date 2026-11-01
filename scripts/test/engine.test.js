@@ -49,6 +49,16 @@ ok(find(p, 'drive_mendele_tue').late < 1, 'שלישי — מספיקים למע�
 for (let i = 1; i < p.list.length; i++) if (p.list[i].plannedStart + 0.01 < p.list[i - 1].plannedEnd) ok(false, 'שלישי — חפיפה: ' + p.list[i].title);
 ok(find(p, 'drive_mendele_tue').legs[0] === 'mendele_pick', 'מענדלה נאסף מ״יין בעיר״');
 
+// Weekly preparation respects the real day plan (flight / Kinus / one-day cancellations).
+const travelLessons = weekLessons(S, new Date('2026-11-01T12:00:00'));
+ok(travelLessons.some(x => x.date === '2026-11-02' && x.title.includes('כולל')), 'שני לפני הנסיעה — שיעור הכולל נשאר');
+ok(!travelLessons.some(x => x.date === '2026-11-03' && x.title.includes('אלכס')), 'יום הטיסה — שיעור אלכס אינו ברשימת ההכנות');
+ok(!travelLessons.some(x => x.date === '2026-11-04' && x.title.includes('כולל')), 'בכינוס — אין שיעורי כולל קבועים');
+const cancelledLessons = weekLessons(S, new Date('2026-10-18T12:00:00'), {
+  '2026-10-18': { overrides: { shiur_eve: { off: true } } },
+});
+ok(!cancelledLessons.some(x => x.date === '2026-10-18' && x.title.includes('רוסית')), 'ביטול חד-פעמי — שיעור הערב מוסר מהכנות השבוע');
+
 // שישי — מבצעים והכנות לשבת עד הדלקת נרות
 const fri = new Date('2026-10-23T05:00:00');
 p = planDay({ settings: S, date: fri, state: {}, zmanim: z, now: toMin('05:00') });
