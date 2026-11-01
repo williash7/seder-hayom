@@ -17,6 +17,7 @@ const KINDS = [
   { k: 'stay', label: 'להיות שם', icon: 'clock' },
   { k: 'study', label: 'לימוד', icon: 'book' },
   { k: 'task', label: 'משימה', icon: 'list' },
+  { k: 'custom_list', label: 'רשימת משימות', icon: 'list' },
   { k: 'timer', label: 'טיימר', icon: 'play' },
 ];
 const MINS = [5, 10, 15, 20, 30, 45, 60, 90];
@@ -40,6 +41,8 @@ export default function PlanChange() {
   const [items, setItems] = useState([]);
   const [newPlaces, setNewPlaces] = useState({});
   const [edit, setEdit] = useState(null);   // הפריט שבונים עכשיו
+  const [listDraft, setListDraft] = useState('');
+  const [listLines, setListLines] = useState([]);
   const [say, setSay] = useState('');       // משפט מוקלד/מוכתב
   const [when, setWhen] = useState('now');
   const [atTime, setAtTime] = useState('');
@@ -62,7 +65,12 @@ export default function PlanChange() {
   const delSeq = id => actions.saveSettings({ ...settings, sequences: seqs.filter(x => x.id !== id) });
 
   const places = { ...(settings.places || {}), ...newPlaces };
-  const start = k => setEdit({ k, title: '', minutes: k === 'study' ? 30 : k === 'stay' ? 20 : 10, free: '', time: '', place: null, name: '', address: '', drive: 10, driveFree: '' });
+  const start = k => { setListDraft(''); setListLines([]); setEdit({ k, title: '', minutes: k === 'study' ? 30 : k === 'stay' ? 20 : 10, free: '', time: '', place: null, name: '', address: '', drive: 10, driveFree: '' }); };
+  const appendListLines = () => {
+    const lines = listDraft.split(/[\\n,،;]+/).map(x => x.trim()).filter(Boolean);
+    if (lines.length) setListLines(old => [...old, ...lines.map((label,i) => ({ id: 'step_' + Date.now() + '_' + i, label, minutes: 5 }))]);
+    setListDraft('');
+  };
 
   const addItem = () => {
     const e = edit;
@@ -71,7 +79,12 @@ export default function PlanChange() {
     if (e.time.trim() && !HHMM.test(e.time.trim())) return;
     const at = e.time.trim() ? e.time.trim().padStart(5, '0') : null;
     const extra = at ? { at } : {};
-    if (e.k === 'drive') {
+    if (e.k === 'custom_list') {
+      const lines = [...listLines, ...listDraft.split(/[\\n,،;]+/).map(x => x.trim()).filter(Boolean).map((label,i) => ({ id: 'step_' + Date.now() + '_' + i, label, minutes: 5 }))];
+      if (!e.title.trim() || !lines.length) return;
+      setItems(l => [...l, { type: 'custom_list', title: e.title.trim(), icon: 'list', steps: lines, minutes: lines.reduce((sum,x) => sum + (Number(x.minutes)||0),0), ...extra }]);
+      setListDraft(''); setListLines([]);
+    } else if (e.k === 'drive') {
       let id = e.place;
       const dFree = parseFree(e.driveFree);
       if (!id) {
@@ -184,7 +197,27 @@ export default function PlanChange() {
           ) : (
             <Card tone="sunk" style={{ marginTop: SP.sm }}>
               <T v="bodyB">{KINDS.find(k => k.k === edit.k).label}</T>
-              {edit.k === 'drive' ? (
+              {edit.k === 'custom_list' ? (
+                <>
+                  <Field value={edit.title} onChangeText={v => setEdit({ ...edit, title: v })}
+                    placeholder="שם הרשימה, למשל: סידור הבית" style={{ marginTop: SP.sm }} />
+                  <T v="small" c="sub" style={{ marginTop: SP.md }}>המשימות ברשימה — אפשר לסמן אותן בכל סדר:</T>
+                  {listLines.map((x, i) => (
+                    <View key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm, marginTop: SP.sm }}>
+                      <Field value={x.label} onChangeText={v => setListLines(a => a.map((y,j)=>j===i?{...y,label:v}:y))} style={{ flex: 1 }} />
+                      <Field value={String(x.minutes)} keyboardType="numeric"
+                        onChangeText={v => setListLines(a => a.map((y,j)=>j===i?{...y,minutes:Math.max(0,Number(v)||0)}:y))}
+                        style={{ width: 48 }} />
+                      <Pressable onPress={() => setListLines(a=>a.filter((_,j)=>i!==j))}><Icon name="x" size={18} color={t.sub}/></Pressable>
+                    </View>
+                  ))}
+                  <Field value={listDraft} onChangeText={setListDraft} multiline
+                    placeholder={'כתוב משימות, אחת בכל שורה\\nאו הפרד בפסיקים'}
+                    style={{ minHeight: 70, marginTop: SP.sm }} />
+                  <Btn title="+ הוסף לרשימה" kind="line" small disabled={!listDraft.trim()} onPress={appendListLines} />
+                  <T v="tiny" c="sub" style={{ marginTop: SP.xs }}>המספר ליד כל משימה הוא משך משוער בדקות. אפשר לשמור את הרשימה לפעם הבאה.</T>
+                </>
+              ) : edit.k === 'drive' ? (
                 <>
                   <T v="tiny" c="sub" style={{ marginTop: SP.sm }}>למקום שמור:</T>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
