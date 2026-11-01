@@ -15,6 +15,8 @@ const sun = new Date('2026-10-18T05:00:00');
 let p = planDay({ settings: S, date: sun, state: {}, zmanim: z, now: toMin('05:00') });
 ok(p.current?.id === 'wake', 'לפני הקימה — התחנה הנוכחית היא השכמה');
 ok(toTime(find(p, 'kollel').plannedStart) === '10:00', 'הכולל ב-10:00');
+const childChecks = find(p, 'kids_ready');
+ok(!!childChecks && p.list.indexOf(childChecks) === p.list.indexOf(find(p, 'sandwiches')) + 1 && childChecks.type === 'checklist' && childChecks.items.length === 8, 'בדיקת הילדים — שמונה סימונים מיד אחרי הכריכים');
 ok(toTime(find(p, 'drive_mendele').plannedEnd) === '14:20', 'מגיעים למענדלה ב-14:20');
 ok(toTime(find(p, 'showers').plannedStart) === '18:45', 'מקלחות ב-18:45');
 ok(!!find(p, 'shiur_eve'), 'ביום ראשון יש שיעור ערב');
@@ -26,7 +28,7 @@ for (let i = 1; i < p.list.length; i++) {
 // בבית הכנסת ב-08:02 — בחירת מניין
 const st = { stations: {} };
 let m = toMin('06:50');
-for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul']) {
+for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'kids_ready', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul']) {
   st.stations[id] = { status: 'done', start: m, end: m + 8 }; m += 8;
 }
 const opts = evaluateMinyan({ settings: S, date: sun, state: st, zmanim: z, now: m, prayer: 'shacharit' });
@@ -150,7 +152,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 {
   const day = new Date(2026, 9, 18, 6);
   const mk = upto => { const st = { stations: {} }; let m = toMin('06:30'); for (const id of upto) { st.stations[id] = { status: 'done', start: m, end: m + 1 }; m += 1; } return st; };
-  const before = ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids'];
+  const before = ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'kids_ready', 'drive_kids'];
   // מגיעים לבית הכנסת ב-9:01 (כמו היום): מניין 9:15, ההכנה מתבטלת, בכולל ב-10:00
   let st = mk([...before, 'drive_mikveh', 'mikveh', 'drive_shul']);
   let q = planDay({ settings: S2, date: day, state: st, zmanim: z, now: toMin('09:01') });
@@ -257,7 +259,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 {
   const day = new Date(2026, 9, 18, 6);
   const st = { stations: {} };
-  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit']) st.stations[id] = { status: 'done', start: 400, end: 400 };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'kids_ready', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit']) st.stations[id] = { status: 'done', start: 400, end: 400 };
   st.choices = { shacharit: 'alone' };
   let q = planDay({ settings: S, date: day, state: st, zmanim: z, now: toMin('09:05') });
   ok(find(q, 'kollel').late < 0.5 && q.list.indexOf(find(q, 'shacharit')) < q.list.indexOf(find(q, 'kollel')), 'ביחידות מ-9:05 — לפני הכולל');
@@ -279,7 +281,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 {
   const tue = new Date(2026, 9, 20, 6);
   const st = { stations: {} };
-  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul']) st.stations[id] = { status: 'done', start: 400, end: 400 };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'kids_ready', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul']) st.stations[id] = { status: 'done', start: 400, end: 400 };
   const q = planDay({ settings: S, date: tue, state: st, zmanim: z, now: toMin('09:31') });
   ok(find(q, 'kollel').late < 0.5 && find(q, 'alex_shiur').late < 0.5 && find(q, 'drive_alex').late < 0.5 && find(q, 'drive_mendele_tue').late < 0.5, 'שלישי — כולל, אלכס ומענדלה בזמן');
   ok(q.list.indexOf(find(q, 'shacharit')) > q.list.indexOf(find(q, 'alex_shiur')), 'שלישי — שחרית ביחידות אחרי אלכס (' + toTime(find(q, 'shacharit').plannedStart) + ')');
@@ -350,7 +352,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 {
   const day = new Date(2026, 9, 21, 6);
   const st = { stations: {} };
-  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul']) st.stations[id] = { status: 'done', start: 400, end: 400 };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'kids_ready', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul']) st.stations[id] = { status: 'done', start: 400, end: 400 };
   const o = evaluateMinyan({ settings: S, date: day, state: st, zmanim: z, now: toMin('08:59'), prayer: 'shacharit' });
   const nine = o.find(x => x.time === '09:00');
   ok(nine.reachable && nine.ok, 'מגיעים 8:59 — מניין 9:00 מותר ומספיקים לכולל');
@@ -362,7 +364,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 {
   const day = new Date(2026, 9, 21, 6);
   const st = { stations: {} };
-  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit', 'korbanot']) st.stations[id] = { status: 'done', start: 400, end: 400 };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'kids_ready', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit', 'korbanot']) st.stations[id] = { status: 'done', start: 400, end: 400 };
   st.stations.shacharit = { status: 'done', start: toMin('09:00'), end: toMin('09:13') };
   const q = planDay({ settings: S, date: day, state: st, zmanim: z, now: toMin('09:23') });
   ok(q.current?.id !== 'study_am' && find(q, 'study_am').status === 'auto', 'שחרית סומנה — הלימוד שלפניה עבר (עכשיו: ' + q.current?.title + ')');
@@ -465,7 +467,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
 {
   const day = new Date('2026-10-28T09:50:00');
   const st = { stations: {}, choices: {} };
-  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit', 'study_am']) st.stations[id] = { status: 'done', start: 400, end: 410 };
+  for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'kids_ready', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul', 'pick_shacharit', 'study_am']) st.stations[id] = { status: 'done', start: 400, end: 410 };
   st.stations.korbanot = { start: toMin('09:47') };
   st.stations.study_post = { status: 'skipped', start: toMin('09:44'), end: toMin('09:44') };
   const q = planDay({ settings: S, date: day, state: st, zmanim: z, now: toMin('09:50') });
