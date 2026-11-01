@@ -29,7 +29,8 @@ for (let i = 1; i < p.list.length; i++) {
 const st = { stations: {} };
 let m = toMin('06:50');
 for (const id of ['wake', 'morning', 'birchos', 'shopping', 'sandwiches', 'kids_ready', 'drive_kids', 'drive_mikveh', 'mikveh', 'drive_shul']) {
-  st.stations[id] = { status: 'done', start: m, end: m + 8 }; m += 8;
+  const took = id === 'kids_ready' ? 0 : 8;
+  st.stations[id] = { status: 'done', start: m, end: m + took }; m += took;
 }
 const opts = evaluateMinyan({ settings: S, date: sun, state: st, zmanim: z, now: m, prayer: 'shacharit' });
 ok(!opts.find(o => o.time === '07:30').reachable && opts.find(o => o.time === '08:00').reachable, 'מניין 07:30 עבר; 08:00 — מצטרפים באמצע');
