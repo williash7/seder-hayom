@@ -51,7 +51,9 @@ ok(find(p, 'drive_mendele_tue').legs[0] === 'mendele_pick', 'מענדלה נאס
 
 // Weekly preparation respects the real day plan (flight / Kinus / one-day cancellations).
 const travelLessons = weekLessons(S, new Date('2026-11-01T12:00:00'));
-ok(travelLessons.some(x => x.date === '2026-11-02' && x.title.includes('כולל')), 'שני לפני הנסיעה — שיעור הכולל נשאר');
+ok(!travelLessons.some(x => x.date === '2026-11-02' && x.title.includes('כולל')), '2.11 בלבד — הכולל מבוטל לפני הנסיעה');
+const regularMonday = weekLessons(S, new Date('2026-11-16T09:00:00'));
+ok(regularMonday.some(x => x.date === '2026-11-16' && x.title.includes('כולל')), 'שני רגיל אחרי הנסיעה — הכולל נשאר');
 ok(!travelLessons.some(x => x.date === '2026-11-03' && x.title.includes('אלכס')), 'יום הטיסה — שיעור אלכס אינו ברשימת ההכנות');
 ok(!travelLessons.some(x => x.date === '2026-11-04' && x.title.includes('כולל')), 'בכינוס — אין שיעורי כולל קבועים');
 const cancelledLessons = weekLessons(S, new Date('2026-10-18T12:00:00'), {
@@ -451,6 +453,32 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
     const x = planDay({ settings: S, date: new Date(d + 'T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
     ok(x.list.length > 3 && x.list.every(s => s.plannedEnd >= s.plannedStart), 'תכנית תקינה ל-' + d);
   }
+}
+
+// ── סדר נסיעה: 2.11 אינו יום שני קבוע, אך שגרת הילדים נשמרת ──
+{
+  const date = new Date('2026-11-02T06:00:00');
+  const q = planDay({ settings: S, date, state: {}, zmanim: z, now: toMin('06:00') });
+  for (const id of ['wake', 'morning', 'birchos', 'sandwiches', 'kids_ready', 'drive_kids', 'drive_mikveh', 'mikveh', 'shacharit', 'embassy_depart', 'embassy_passport', 'jerusalem_mincha', 'jerusalem_return', 'trip_eve']) {
+    ok(!!find(q, id), '2.11 יש תחנה ' + id);
+  }
+  for (const id of ['shiur_prep', 'drive_kollel', 'kollel', 'edit_kollel']) {
+    ok(!find(q, id), '2.11 בלבד אין ' + id);
+  }
+  ok(find(q, 'kids_ready').items.length === 8, '2.11 בדיקת לבוש ונטילת ידיים לכל ארבעת הילדים');
+  ok(q.list.indexOf(find(q, 'sandwiches')) < q.list.indexOf(find(q, 'drive_kids')) &&
+     q.list.indexOf(find(q, 'drive_kids')) < q.list.indexOf(find(q, 'shacharit')), '2.11 הילדים במוסדות לפני שחרית');
+  ok(toTime(find(q, 'embassy_depart').plannedStart) === '11:30', '2.11 יציאה לירושלים 11:30');
+  ok(toTime(find(q, 'embassy_passport').plannedStart) === '14:00', '2.11 איסוף הדרכון 14:00');
+  ok(toTime(find(q, 'jerusalem_mincha').plannedStart) === '15:00', '2.11 מנחה בירושלים 15:00');
+  const mon = planDay({ settings: S, date: new Date('2026-11-16T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
+  ok(!!find(mon, 'kollel') && !!find(mon, 'drive_kollel'), '16.11 חוזרים לכולל ביום שני');
+  const wed = planDay({ settings: S, date: new Date('2026-11-04T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
+  ok(!!find(wed, 'ohel_wed'), '4.11 ביקור האוהל הוא חלק מהתוכנית האישית');
+  const thu = planDay({ settings: S, date: new Date('2026-11-05T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
+  ok(toTime(find(thu, 'rebbe_room_shacharit').plannedStart) === '09:30', '5.11 שחרית בחדר הרבי 09:30');
+  const ret = planDay({ settings: S, date: new Date('2026-11-09T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
+  ok(!!find(ret, 'ohel_return') && !!find(ret, 'flight_ua2838'), '9.11 ביקור באוהל לפני טיסת החזרה');
 }
 
 // ── יום בחירות (27.10): הילדים בבית, המשימות מוכנסות והמוסדות יוצאים ──
