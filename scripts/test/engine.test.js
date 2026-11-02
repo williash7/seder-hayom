@@ -487,7 +487,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const mon = planDay({ settings: S, date: new Date('2026-11-16T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
   ok(!!find(mon, 'kollel') && !!find(mon, 'drive_kollel'), '16.11 חוזרים לכולל ביום שני');
   const wed = planDay({ settings: S, date: new Date('2026-11-04T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
-  ok(!!find(wed, 'ohel_wed'), '4.11 ביקור האוהל הוא חלק מהתוכנית האישית');
+  ok(!!find(wed, 'ohel_entry_wed') && !!find(wed, 'ohel_pan_wed'), '4.11 ביקור האוהל כולל פ״נ ותפילה אישית');
   const thu = planDay({ settings: S, date: new Date('2026-11-05T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
   ok(toTime(find(thu, 'rebbe_room_shacharit').plannedStart) === '09:30', '5.11 שחרית בחדר הרבי 09:30');
   const ret = planDay({ settings: S, date: new Date('2026-11-09T06:00:00'), state: {}, zmanim: z, now: toMin('06:00') });
