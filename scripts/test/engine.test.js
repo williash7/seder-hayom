@@ -494,6 +494,64 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(!!find(ret, 'ohel_return') && !!find(ret, 'flight_ua2838'), '9.11 ביקור באוהל לפני טיסת החזרה');
 }
 
+// ── המשך טיסה בניוארק לפי שעון ניו יורק, וביקור האוהל ביום רביעי ──
+{
+  // מדמים טלפון שעבר לשעון חורף ניו יורק (EST, UTC-5).
+  // הבדיקות אינן מסתמכות על אזור הזמן שבו רץ CI.
+  const nyTue = new Date(2026, 10, 3, 12, 0);
+  nyTue.getTimezoneOffset = () => 300;
+  const q = planDay({ settings: S, date: nyTue, state: {}, zmanim: z, now: toMin('16:00') });
+  const t = id => { const x = find(q, id); return x ? toTime(x.plannedStart) : '—'; };
+  const times = [
+    ['ewr_landing','16:35'], ['ewr_immigration','17:00'],
+    ['ewr_baggage','17:45'], ['ewr_father','18:15'],
+    ['ewr_to_ch','18:30'], ['ny_checkin_lodging','19:45'],
+    ['ny_first_food','20:15'], ['maariv','20:25'],
+    ['ny_to_770','20:45'], ['ny_770_first','21:15'],
+    ['ny_return_sleep','22:00'],
+  ];
+  for (const [id, at] of times) ok(t(id) === at, 'ניוארק 3.11: ' + id + ' ב-' + at + ' (בפועל ' + t(id) + ')');
+  ok(!find(q, 'flight_ua85') && !find(q, 'train_ride'), 'בשעון ניו יורק לא חוזרים ללוח הבוקר הישראלי');
+  ok(find(q, 'ewr_father').items.some(x => x.includes('אבא')) &&
+    find(q, 'ny_to_770').canDrop, 'מפגש עם אבא, 770 בערב כרשות');
+  const qNY = planDay({ settings: S, date: nyTue, state: {}, zmanim: z, now: toMin('17:00') });
+  ok(qNY.current?.id === 'ewr_landing', 'הגעתי ב-17:00: שלבי הנחיתה נמשכים לפי העיכוב');
+  const ilTue = new Date(2026, 10, 3, 7, 0);
+  ilTue.getTimezoneOffset = () => -120;
+  const israel = planDay({ settings: S, date: ilTue, state: {}, zmanim: z, now: toMin('07:00') });
+  ok(!!find(israel, 'train_ride') && !!find(israel, 'flight_ua85') && !find(israel, 'ewr_landing'),
+    'בשעון ישראל נשמר מסלול הרכבת והטיסה');
+}
+{
+  const nyWed = new Date(2026, 10, 4, 8, 0);
+  nyWed.getTimezoneOffset = () => 300;
+  const p = planDay({ settings: S, date: nyWed, state: {}, zmanim: z, now: toMin('05:50') });
+  const t = id => { const x = find(p, id); return x ? toTime(x.plannedStart) : '—'; };
+  const times = [
+    ['wake','06:15'], ['ohel_breakfast_wed','06:30'], ['ohel_walk_to_bus','06:50'],
+    ['ohel_bus_out','07:00'], ['ohel_mikveh_wed','08:00'],
+    ['shacharit','08:30'], ['ohel_chassidus_wed','09:15'],
+    ['ohel_pan_wed','10:00'], ['ohel_entry_wed','11:15'],
+    ['ohel_more_wed','12:30'], ['ohel_bus_back','13:00'],
+    ['kinus_wed_registration','14:00'], ['kinus_wed_exhibit_770','15:00'],
+    ['mincha','16:30'], ['kinus_wed_dinner','18:00'],
+    ['kinus_wed_770_evening','19:00'], ['maariv','20:30'],
+    ['kinus_wed_night_preparation','21:00'],
+  ];
+  for (const [id, at] of times) ok(t(id) === at, 'רביעי 4.11: ' + id + ' ב-' + at + ' (בפועל ' + t(id) + ')');
+  ok(toTime(find(p,'shacharit').plannedEnd) === '09:15', 'שחרית באוהל עד 09:15, משך 45 דקות ביום הזה בלבד');
+  ok(find(p, 'ohel_bus_out').legs[0] === 'ohel' &&
+    find(p, 'ohel_bus_back').legs[0] === 'crown_heights', 'ניווט ל-226-20 Francis Lewis והסעה חזרה');
+  ok(find(p, 'ohel_pan_wed').items.some(x => x.includes('הקהילה')), 'זמן כתיבת פ״נ כולל פתקים מהקהילה');
+  ok(find(p, 'ohel_entry_wed').protect && find(p, 'ohel_mikveh_wed').canDrop, 'האוהל עוגן מרכזי, מקווה מותנה בפתיחה');
+  ok(!find(p, 'kollel') && !find(p, 'drive_kids'), 'רביעי בכינוס אינו מפעיל את סדר היום הרגיל בארץ');
+  ok(p.list.every((x, i, a) => i === 0 || x.plannedStart >= a[i-1].plannedEnd - 0.5),
+    'רביעי — התחנות אינן חופפות');
+  const thu = planDay({ settings: S, date: new Date(2026, 10, 5, 6), state: {}, zmanim: z, now: toMin('06:00') });
+  ok(toTime(find(thu, 'rebbe_room_shacharit').plannedStart) === '09:30',
+    'העדכון אינו משנה שחרית בחדר הרבי ביום חמישי');
+}
+
 // ── יום בחירות (27.10): הילדים בבית, המשימות מוכנסות והמוסדות יוצאים ──
 {
   const b = INBOX.find(x => x.id === 'election-2026-10-27');
