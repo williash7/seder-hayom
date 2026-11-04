@@ -236,7 +236,7 @@ function TextSt({ s, go }) {
 // ───────────── רשימת סימון ─────────────
 function Checklist({ s }) {
   const { actions, settings } = useDay();
-  const items = s.listKey ? (settings.lists?.[s.listKey] || []) : (s.items || []);
+  const items = s.useEditedItems ? (s.items || []) : s.listKey ? (settings.lists?.[s.listKey] || []) : (s.items || []);
   const checked = s.rec?.data?.checked || {};
   const [draft, setDraft] = useState('');
   const toggle = it => actions.setData(s.id, { checked: { ...checked, [it]: !checked[it] } });
