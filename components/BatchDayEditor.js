@@ -302,7 +302,7 @@ export default function BatchDayEditor({
                 </>
               )}
               <T v="small" c="sub">הערות או הוראות הגעה</T>
-              <Field value={form.sub} onChangeText={v => update('sub', v)
+              <Field value={form.sub} onChangeText={v => update('sub', v)}
                 placeholder="מידע נוסף (לא חובה)" multiline />
               {!!form.id && ['done', 'skipped'].includes(list.find(s => s.id === form.id)?.status) && (
                 <T v="small" style={{ color: t.warn }}>משימה שכבר בוצעה: העריכה לא תשנה את שעת הביצוע שנשמרה.</T>
