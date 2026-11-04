@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { View, Alert, AppState, Pressable } from 'react-native';
 import { useDay } from '../lib/DayContext';
 import { evaluateMinyan, planDay } from '../lib/engine';
-import { openWaze, openApp, openAppAt, openVideoCamera, dial, shareText } from '../lib/launch';
+import { openWaze, openGoogleMapsWalking, openApp, openAppAt, openVideoCamera, dial, shareText } from '../lib/launch';
 import { toTime, fmtDur, fmtClock, toMin, dateKey, addDays } from '../lib/time';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Check, Card, Field, Chip, IconBtn, Divider, Sheet } from '../components/UI';
@@ -333,6 +333,7 @@ function Drive({ s }) {
   const t = useT();
   const legs = s.rec?.data?.order || s.legs || [];
   const leg = s.rec?.data?.leg || 0;
+  const walking = !!s.walk;
   // סדר האיסוף לבחירה (למשל: קודם הבנות או קודם צביה)
   const first = id => actions.setData(s.id, { order: [id, ...legs.filter(x => x !== id)] });
   const [returned, setReturned] = useState(false);
@@ -345,7 +346,12 @@ function Drive({ s }) {
 
   const go = async () => {
     actions.start(s.id);
-    try { opened.current = true; await openWaze(settings.places?.[legs[leg]] || TRIP_PLACES[legs[leg]]); } catch (e) { fail(e); }
+    try {
+      const place = settings.places?.[legs[leg]] || TRIP_PLACES[legs[leg]];
+      opened.current = true;
+      if (walking) await openGoogleMapsWalking(place);
+      else await openWaze(place);
+    } catch (e) { fail(e); }
   };
   const arrived = () => {
     setReturned(false); opened.current = false;
@@ -358,6 +364,15 @@ function Drive({ s }) {
 
   return (
     <View>
+      {walking && (
+        <View style={{ backgroundColor: t.sunk, borderRadius: R.md, padding: SP.md, marginBottom: SP.sm }}>
+          <T v="bodyB">הליכה ברגל · Google Maps</T>
+          <T v="small" c="sub" style={{ marginTop: 5 }}>
+            {s.walkHint || 'פתח ניווט רגלי בגוגל מפות מהמיקום הנוכחי עד היעד.'}
+          </T>
+          <T v="tiny" c="sub" style={{ marginTop: 5 }}>זמן ההליכה הוא הערכה; גוגל מפות יחשב מסלול וזמן מעודכנים.</T>
+        </View>
+      )}
       {s.chooseOrder && leg === 0 && legs.length > 1 && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginBottom: SP.sm }}>
           <T v="small" c="sub" style={{ alignSelf: 'center' }}>קודם:</T>
@@ -376,13 +391,13 @@ function Drive({ s }) {
             </View>
             <View style={{ flex: 1 }}>
               <T v="bodyB">{p.name}</T>
-              <T v="small" c="sub">{p.address || 'אין כתובת — להוסיף בהגדרות'} · ~{p.minutes || 10} דק׳</T>
+              <T v="small" c="sub">{p.address || 'אין כתובת — להוסיף בהגדרות'} · כ־{p.minutes || 10} דק׳ {walking ? 'ברגל (משוער)' : ''}</T>
             </View>
           </View>
         );
       })}
       <Actions>
-        <Btn title={`פתח וויז — ${(settings.places?.[legs[leg]] || TRIP_PLACES[legs[leg]])?.name || ''}`} icon="nav" kind={returned ? 'line' : 'gold'} onPress={go} />
+        <Btn title={`${walking ? 'פתח Google Maps להליכה' : 'פתח וויז'} — ${(settings.places?.[legs[leg]] || TRIP_PLACES[legs[leg]])?.name || ''}`} icon="nav" kind={returned ? 'line' : 'gold'} onPress={go} />
         <Btn title={leg + 1 >= legs.length ? 'הגעתי' : 'הגעתי — לתחנה הבאה'} icon="check"
           kind={returned ? 'ok' : 'primary'} onPress={arrived} />
       </Actions>

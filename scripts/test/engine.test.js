@@ -528,7 +528,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const p = planDay({ settings: S, date: nyWed, state: {}, zmanim: z, now: toMin('05:50') });
   const t = id => { const x = find(p, id); return x ? toTime(x.plannedStart) : '—'; };
   const times = [
-    ['wake','06:15'], ['ohel_breakfast_wed','06:30'], ['ohel_walk_to_bus','06:50'],
+    ['wake','06:00'], ['ohel_breakfast_wed','06:15'], ['ohel_walk_to_bus','06:30'],
     ['ohel_bus_out','07:00'], ['ohel_mikveh_wed','08:00'],
     ['shacharit','08:30'], ['ohel_chassidus_wed','09:15'],
     ['ohel_pan_wed','10:00'], ['ohel_entry_wed','11:15'],
@@ -543,6 +543,9 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(find(p, 'ohel_bus_out').legs[0] === 'ohel' &&
     find(p, 'ohel_bus_back').legs[0] === 'crown_heights', 'ניווט ל-226-20 Francis Lewis והסעה חזרה');
   ok(find(p, 'ohel_pan_wed').items.some(x => x.includes('הקהילה')), 'זמן כתיבת פ״נ כולל פתקים מהקהילה');
+  ok(find(p, 'ohel_walk_to_bus').walk && find(p, 'ohel_walk_to_bus').legs[0] === 'bus_ohel' &&
+    find(p, 'kinus_wed_transition').walk && find(p, 'kinus_wed_transition').legs[0] === 'oholei_torah',
+    'התניידות בקראון הייטס ברגל בגוגל מפות, בנפרד מההסעה לאוהל');
   ok(find(p, 'ohel_entry_wed').protect && find(p, 'ohel_mikveh_wed').canDrop, 'האוהל עוגן מרכזי, מקווה מותנה בפתיחה');
   ok(find(p, 'mincha').sub.includes('667 Eastern Parkway') &&
     find(p, 'kinus_wed_770_evening').sub.includes('לא ב־770') &&
