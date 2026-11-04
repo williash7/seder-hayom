@@ -15,10 +15,15 @@ const makeForm = (s, isNew = false) => ({
   duration: String(isNew ? 10 : Math.max(0, Math.round(s.manualMinutes ?? s.duration ?? s.minutes ?? 10))),
   address: isNew ? '' : (s.address || ''),
   walk: isNew ? false : !!s.walk,
+  listField: isNew ? null : Array.isArray(s.steps) ? 'steps' : Array.isArray(s.items) ? 'items' : null,
+  listText: isNew ? '' : Array.isArray(s.steps)
+    ? s.steps.map(x => x.label || x.title || '').join('\n')
+    : Array.isArray(s.items) ? s.items.map(x => typeof x === 'string' ? x : x.label || x.title || '').join('\n') : '',
+  taskRecord: false,
 });
 
 export default function BatchDayEditor({
-  visible, onClose, onSave, settings, dayDate, dayState, zmanim, now, focusId,
+  visible, onClose, onSave, settings, dayDate, dayState, zmanim, now, focusId, tasks = [], isToday,
 }) {
   const t = useT();
   const dayKey = dateKey(dayDate);
@@ -38,10 +43,20 @@ export default function BatchDayEditor({
   }, [visible, dayKey, focusId]);
 
   const report = useMemo(() => draft ? reviewDayDraft({
-    settings, date: dayDate, state: dayState, draft, zmanim, now,
-  }) : null, [settings, dayKey, dayState, draft, zmanim, now]);
+    settings, date: dayDate, state: dayState, draft, zmanim, now, tasks,
+  }) : null, [settings, dayKey, dayState, draft, zmanim, now, tasks]);
 
   const list = report?.plan?.list || [];
+  const taskRows = (tasks || [])
+    .map(task => ({ ...task, ...(draft?.taskEdits?.[task.id] || {}) }))
+    .filter(task => task.date === dayKey || (isToday && task.date < dayKey && !task.done));
+  const chooseTask = id => {
+    const task = taskRows.find(x => x.id === id);
+    if (!task) return;
+    setForm({ ...makeForm(task), taskRecord: true });
+    setWarningsOpen(false);
+    setValidation('');
+  };
   const choose = id => {
     const s = list.find(x => x.id === id) || draft?.extras?.find(x => x.id === id);
     if (!s) return;
@@ -78,7 +93,28 @@ export default function BatchDayEditor({
     const duration = Number(form.duration);
     const at = form.mode === 'at' ? normalizedTime(form.time) : null;
     const arriveBy = form.mode === 'arrive' ? normalizedTime(form.time) : null;
-    if (!form.id) {
+    if (form.taskRecord) {
+      const original = taskRows.find(x => x.id === form.id);
+      if (!original) { setValidation('המשימה לא נמצאה.'); return; }
+      const patch = {};
+      if (title !== original.title) patch.title = title;
+      if (sub !== (original.sub || '')) patch.sub = sub;
+      if (address !== (original.address || '')) patch.address = address;
+      if (form.walk !== !!original.walk) patch.walk = form.walk;
+      if (duration !== Number(original.minutes ?? 10)) patch.minutes = duration;
+      const oldMode = original.arriveBy ? 'arrive' : original.at ? 'at' : 'none';
+      const oldTime = original.arriveBy || original.at || '';
+      if (form.mode !== oldMode ||
+          (form.mode !== 'none' && normalizedTime(form.time) !== normalizedTime(oldTime))) {
+        patch.at = at;
+        patch.arriveBy = arriveBy;
+      }
+      if (Object.keys(patch).length) {
+        setDraft(d => ({ ...d, taskEdits: {
+          ...(d.taskEdits || {}), [form.id]: { ...(d.taskEdits?.[form.id] || {}), ...patch },
+        } }));
+      }
+    } else if (!form.id) {
       const id = 'edit_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
       const requested = at ? toMin(at) : (arriveBy ? toMin(arriveBy) - duration : null);
       const target = requested == null ? null :
@@ -96,6 +132,18 @@ export default function BatchDayEditor({
       if (sub !== (s.sub || '')) patch.sub = sub;
       if (address !== (s.address || '')) patch.address = address;
       if (form.walk !== !!s.walk) patch.walk = form.walk;
+      if (form.listField) {
+        const before = (s[form.listField] || []).map(x => typeof x === 'string' ? x : x.label || x.title || '');
+        const after = form.listText.split('\n').map(x => x.trim()).filter(Boolean);
+        if (before.join('\n') !== after.join('\n')) {
+          if (form.listField === 'items') patch.items = after;
+          else patch.steps = after.map((label, i) => ({
+            ...(s.steps?.[i] || {}),
+            id: s.steps?.[i]?.id || ('step_edit_' + Date.now() + '_' + i),
+            label, minutes: s.steps?.[i]?.minutes ?? 5,
+          }));
+        }
+      }
       if (duration !== Math.round(s.manualMinutes ?? s.duration ?? s.minutes ?? 0)) {
         patch.manualMinutes = duration;
         if (s.fill) patch.fill = false;
@@ -129,6 +177,10 @@ export default function BatchDayEditor({
   const omit = () => {
     if (!form?.id) return;
     const s = list.find(x => x.id === form.id);
+    if (form.taskRecord) {
+      setForm(null);
+      return;
+    }
     if (s?.extra) setDraft(d => ({ ...d, extras: d.extras.filter(x => x.id !== s.id) }));
     else setDraft(d => ({ ...d, overrides: {
       ...d.overrides, [form.id]: { ...(d.overrides[form.id] || {}), off: true },
@@ -200,6 +252,17 @@ export default function BatchDayEditor({
                     {s.address ? ' · ' + s.address : ''}{s.walk ? ' · ברגל' : ''}</T>
                 </Pressable>
               ))}
+              {!!taskRows.length && <T v="bodyB">משימות אישיות ברשימת היום</T>}
+              {taskRows.map(task => (
+                <Pressable key={'task:' + task.id} onPress={() => chooseTask(task.id)}
+                  style={{ padding: SP.md, borderRadius: R.md, backgroundColor: t.sunk, gap: 3 }}>
+                  <T v="bodyB">{task.title} {draft.taskEdits?.[task.id] ? '✎' : ''}</T>
+                  <T v="small" c="sub">
+                    {task.at || task.arriveBy || 'ללא שעה'}{task.minutes != null ? ' · ' + task.minutes + ' דקות' : ''}
+                    {task.address ? ' · ' + task.address : ''}{task.walk ? ' · הליכה' : ''}
+                  </T>
+                </Pressable>
+              ))}
               {Object.entries(draft.overrides).filter(([, patch]) => patch?.off).map(([id]) => (
                 <View key={id} style={{ flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
                   <T v="small" c="sub" style={{ flex: 1 }}>תחנה שבוטלה: {id}</T>
@@ -231,15 +294,22 @@ export default function BatchDayEditor({
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm }}>
                 <Chip label="ניווט בהליכה בגוגל מפות" active={form.walk} onPress={() => update('walk', !form.walk)} />
               </View>
+              {!!form.listField && !form.taskRecord && (
+                <>
+                  <T v="small" c="sub">פריטי המשימה — שורה לכל פריט</T>
+                  <Field value={form.listText} onChangeText={v => update('listText', v)}
+                    placeholder="פריט ראשון, פריט שני..." multiline />
+                </>
+              )}
               <T v="small" c="sub">הערות או הוראות הגעה</T>
-              <Field value={form.sub} onChangeText={v => update('sub', v)}
+              <Field value={form.sub} onChangeText={v => update('sub', v)
                 placeholder="מידע נוסף (לא חובה)" multiline />
               {!!form.id && ['done', 'skipped'].includes(list.find(s => s.id === form.id)?.status) && (
                 <T v="small" style={{ color: t.warn }}>משימה שכבר בוצעה: העריכה לא תשנה את שעת הביצוע שנשמרה.</T>
               )}
               {!!validation && <T v="small" style={{ color: t.warn }}>{validation}</T>}
               <Btn title="הוסף את השינוי לטיוטה" icon="check" kind="gold" onPress={stage} />
-              {!!form.id && <Btn title="הסר את התחנה מהיום" icon="x" kind="line" onPress={omit} />}
+              {!!form.id && !form.taskRecord && <Btn title="הסר את התחנה מהיום" icon="x" kind="line" onPress={omit} />}
               <Btn title="חזרה לרשימה בלי לשנות" kind="ghost" onPress={() => setForm(null)} />
             </View>
           )}
