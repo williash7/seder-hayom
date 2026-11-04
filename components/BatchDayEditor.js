@@ -136,7 +136,7 @@ export default function BatchDayEditor({
         const before = (s[form.listField] || []).map(x => typeof x === 'string' ? x : x.label || x.title || '');
         const after = form.listText.split('\n').map(x => x.trim()).filter(Boolean);
         if (before.join('\n') !== after.join('\n')) {
-          if (form.listField === 'items') patch.items = after;
+          if (form.listField === 'items') { patch.items = after; patch.useEditedItems = true; }
           else patch.steps = after.map((label, i) => ({
             ...(s.steps?.[i] || {}),
             id: s.steps?.[i]?.id || ('step_edit_' + Date.now() + '_' + i),
