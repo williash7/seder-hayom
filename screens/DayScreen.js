@@ -112,7 +112,7 @@ function PhoneLog() {
 export default function DayScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan: todayPlan, zmanim: todayZ, dayDate: today, hebrew, actions, settings, eff, sleep, now, state: todayState } = useDay();
+  const { plan: todayPlan, zmanim: todayZ, dayDate: today, hebrew, actions, settings, eff, sleep, now, tasks, state: todayState } = useDay();
   // היום / מחר
   const [which, setWhich] = useState('today');
   const tDate = addDays(today, 1), tKey = dateKey(tDate);
@@ -151,6 +151,7 @@ export default function DayScreen({ go }) {
       const next = { ...tState, overrides: draft.overrides, extras: draft.extras };
       setTState(next);
       S.saveDay(tKey, next);
+      actions.applyTaskEdits(draft.taskEdits);
     }
   };
   const [movePicker, setMovePicker] = useState(false);
@@ -303,7 +304,8 @@ export default function DayScreen({ go }) {
       <BatchDayEditor visible={batchOpen} onClose={() => setBatchOpen(false)}
         onSave={saveBatch} settings={eff || settings} dayDate={dayDate}
         dayState={isToday ? todayState : tState} zmanim={zmanim}
-        now={isToday ? now : 0} focusId={batchFocus} />
+        now={isToday ? now : 0} focusId={batchFocus}
+        tasks={tasks} isToday={isToday} />
     </View>
   );
 }
