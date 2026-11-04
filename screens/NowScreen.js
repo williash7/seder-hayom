@@ -3,6 +3,7 @@
 import { View, ScrollView, Alert, Pressable, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { useDay } from '../lib/DayContext';
 import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Ring, Chip, Sheet, Field } from '../components/UI';
@@ -43,6 +44,8 @@ export default function NowScreen({ go }) {
   const inShabbat = (dow === 5 && zmanim.candles && now >= toMin(zmanim.candles))
     || (dow === 6 && (!zmanim.havdala || now < toMin(zmanim.havdala)));
 
+  const needsNYTimezone = Date.now() >= Date.UTC(2026, 10, 3, 21, 35) &&
+    Date.now() < Date.UTC(2026, 10, 9, 23, 17) && new Date().getTimezoneOffset() !== 300;
   const nightBar = night ? (
     <View style={{ backgroundColor: t.navy, borderRadius: R.md, padding: SP.md, marginBottom: SP.md, flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
       <Icon name="moon" size={20} color={t.onNavy} />
@@ -53,6 +56,14 @@ export default function NowScreen({ go }) {
   ) : null;
   // אזור עליון נקי: פרטי היום בשורה אחת, פעולות נוספות רק בלחיצה.
   const header = (<>
+    {needsNYTimezone && (
+      <View style={{ backgroundColor: t.warnSoft, borderRadius: R.md, padding: SP.md, marginBottom: SP.md, gap: 8 }}>
+        <T v="small">הטלפון עדיין לא מציג שעון ניו יורק. עד שמעדכנים את אזור הזמן, גם שעות התחנות והתזכורות עלולות להיות שגויות.</T>
+        <Btn title="להגדרות תאריך ושעה" icon="settings" kind="line" small onPress={() =>
+          IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.DATE_SETTINGS)
+            .catch(() => Alert.alert('הגדרות שעון', 'פתח הגדרות ← ניהול כללי ← תאריך ושעה, ובחר אזור זמן אוטומטי או ניו יורק.'))} />
+      </View>
+    )}
     {nightBar}
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SP.sm, marginBottom: SP.sm }}>
       <View style={{ flex: 1 }}>
