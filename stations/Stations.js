@@ -630,8 +630,21 @@ function Tasks({ s }) {
     <View>
       {todayTasks.map(x => (
         <Check key={x.id} label={x.title} checked={x.done} onPress={() => actions.toggleTask(x.id)}
-          sub={x.date < dayKey && !x.done ? 'נשאר מיום קודם' : null}
-          right={!x.done && <Chip label="למחר" onPress={() => actions.moveTask(x.id, tomorrowKey)} />} />
+          sub={[
+            x.date < dayKey && !x.done ? 'נשאר מיום קודם' : '',
+            x.at ? 'בשעה ' + x.at : x.arriveBy ? 'להגיע עד ' + x.arriveBy : '',
+            x.address || '',
+            x.sub || '',
+          ].filter(Boolean).join(' · ')}
+          right={
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+              {!x.done && <Chip label="למחר" onPress={() => actions.moveTask(x.id, tomorrowKey)} />}
+              {!!x.address && <Chip label={x.walk ? 'הליכה' : 'מפה'} onPress={() => {
+                const open = x.walk ? openGoogleMapsWalking : openWaze;
+                open({ address: x.address }).catch(fail);
+              }} />}
+            </View>
+          } />
       ))}
       <View style={{ flexDirection: 'row', gap: SP.sm, marginTop: SP.sm }}>
         <Field value={draft} onChangeText={setDraft} placeholder="משימה חדשה להיום" style={{ flex: 1 }} onSubmitEditing={add} />
