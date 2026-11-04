@@ -5,6 +5,8 @@ import { toMin, toTime } from '../../lib/time';
 import { weekLessons } from '../../lib/lessons';
 import { INBOX } from '../../lib/inbox';
 import { createDayDraft, normalizedTime, reviewDayDraft } from '../../lib/dayBatch';
+import { computeZmanim } from '../../lib/sun';
+import { fallbackZmanimPlace, placeFromPosition } from '../../lib/zmanimLocation';
 
 let failed = 0;
 const ok = (cond, msg) => { if (!cond) { failed++; console.error('✗ ' + msg); } else console.log('✓ ' + msg); };
@@ -595,6 +597,38 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ok(item?.title === 'כותרת חדשה' && item?.at == null && item?.duration === 15 &&
     item?.walk && item?.address.includes('Brooklyn'),
     'הטיוטה מאפשרת לשנות שם, להסיר שעה, לקבוע משך וניווט ברגל');
+}
+
+// זמני ניו יורק 4.11.2026 לפי הלוח החב״די שבצילום/לוח חב״ד הרשמי.
+{
+  const oldTz = process.env.TZ;
+  process.env.TZ = 'America/New_York';
+  try {
+    const d = new Date(2026, 10, 4, 12);
+    const z = computeZmanim(d, 40.67, -73.94, 'America/New_York');
+    const near = (actual, expected, maxDiff = 2) =>
+      Math.abs(toMin(actual) - toMin(expected)) <= maxDiff;
+    ok(near(z.alot, '05:02') && near(z.misheyakir, '05:39') &&
+      near(z.sunrise, '06:30'), 'ניו יורק: עלות השחר, משיכיר והנץ לפי חב״ד');
+    ok(near(z.sofZmanShma, '09:02') && near(z.sofZmanTfilla, '09:54') &&
+      near(z.chatzot, '11:39'), 'ניו יורק: סוף ק״ש, סוף תפילה וחצות');
+    ok(near(z.minchaGedola, '12:06') && near(z.minchaKetana, '14:42') &&
+      near(z.plag, '15:48'), 'ניו יורק: מנחה גדולה, קטנה ופלג');
+    ok(near(z.sunset, '16:48') && near(z.tzeit, '17:18') &&
+      near(z.chatzotHalaila, '23:39'), 'ניו יורק: שקיעה, צאת וחצות הלילה');
+    const fallback = fallbackZmanimPlace('America/New_York');
+    ok(fallback?.longitude < -73 && fallback?.latitude > 40 && fallback?.candleMinutes === 18,
+      'אם אין GPS, שעון ניו יורק בוחר ניו יורק ולא עפולה');
+    const local = placeFromPosition({ latitude: 40.667, longitude: -73.94 }, 'Asia/Jerusalem');
+    ok(local?.timeZone === 'America/New_York' && local?.source === 'location',
+      'GPS מזהה ניו יורק גם אם שעון הטלפון עדיין על ישראל');
+    const israel = fallbackZmanimPlace('Asia/Jerusalem');
+    ok(israel?.longitude > 35 && israel?.candleMinutes === 30,
+      'בחזרה לישראל, ברירת המחדל שוב עפולה');
+  } finally {
+    if (oldTz == null) delete process.env.TZ;
+    else process.env.TZ = oldTz;
+  }
 }
 
 // ── יום בחירות (27.10): הילדים בבית, המשימות מוכנסות והמוסדות יוצאים ──
