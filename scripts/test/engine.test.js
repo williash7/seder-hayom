@@ -534,7 +534,7 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
     ['ohel_pan_wed','10:00'], ['ohel_entry_wed','11:15'],
     ['ohel_more_wed','12:30'], ['ohel_bus_back','13:00'],
     ['kinus_wed_registration','14:00'], ['kinus_wed_exhibit_770','15:00'],
-    ['mincha','16:30'], ['kinus_wed_dinner','18:00'],
+    ['kinus_wed_transition','17:30'], ['mincha','18:00'], ['kinus_wed_dinner','18:15'],
     ['kinus_wed_770_evening','19:00'], ['maariv','20:30'],
     ['kinus_wed_night_preparation','21:00'],
   ];
@@ -544,6 +544,10 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
     find(p, 'ohel_bus_back').legs[0] === 'crown_heights', 'ניווט ל-226-20 Francis Lewis והסעה חזרה');
   ok(find(p, 'ohel_pan_wed').items.some(x => x.includes('הקהילה')), 'זמן כתיבת פ״נ כולל פתקים מהקהילה');
   ok(find(p, 'ohel_entry_wed').protect && find(p, 'ohel_mikveh_wed').canDrop, 'האוהל עוגן מרכזי, מקווה מותנה בפתיחה');
+  ok(find(p, 'mincha').sub.includes('667 Eastern Parkway') &&
+    find(p, 'kinus_wed_770_evening').sub.includes('לא ב־770') &&
+    find(p, 'kinus_wed_transition').sub.includes('תג זיהוי'),
+    'ערב רביעי לפי התוכנייה: אהלי תורה, מנחה ב-18:00 ו״להתוועד עם הרבי״ ב-19:00');
   ok(!find(p, 'kollel') && !find(p, 'drive_kids'), 'רביעי בכינוס אינו מפעיל את סדר היום הרגיל בארץ');
   ok(p.list.every((x, i, a) => i === 0 || x.plannedStart >= a[i-1].plannedEnd - 0.5),
     'רביעי — התחנות אינן חופפות');
