@@ -21,7 +21,7 @@ import { planDay } from '../lib/engine';
 import { getZmanim } from '../lib/zmanim';
 import * as Store from '../lib/store';
 import StationBody, { useSeconds } from '../stations/Stations';
-import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES } from '../lib/time';
+import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES, addDays } from '../lib/time';
 
 const dateKeyLocal = d => [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 function KeepAwake() { useKeepAwake(); return null; }
@@ -76,7 +76,7 @@ export default function NowScreen({ go }) {
         <T v="small" c="sub">{showTopActions ? 'סגור' : 'פעולות'}</T>
       </Pressable>
     </View>
-    <FlightCountdown sec={sec} plan={plan} state={state} settings={eff} dayDate={dayDate} now={now} zmanim={zmanim} />
+    <FlightCountdown sec={sec} plan={plan} state={state} settings={eff} dayDate={dayDate} now={now} zmanim={zmanim} go={go} />
     {plan.nextAnchor && <View style={{ marginBottom: 6 }}><T v="tiny" c="sub" numberOfLines={1}>
       הבא: {plan.nextAnchor.title} · {toTime(plan.nextAnchor.time)}{plan.nextAnchor.late > 1 ? ` · איחור ${Math.round(plan.nextAnchor.late)} דק׳` : ''}
     </T></View>}
@@ -110,7 +110,7 @@ export default function NowScreen({ go }) {
   if (plan.empty) return wrap(<Center icon="sun" title="אין תכנית להיום" sub="אפשר להוסיף תחנות ליום הזה בהגדרות" />);
   if (plan.finished) {
     return wrap(
-      <Center icon="moon" title="לילה טוב" sub={`השכמה ב-${(eff || settings).wakeTime}`}>
+      <Center icon="moon" title="לילה טוב" sub={`השכמה ב-${wakeTimeFor({ ...eff, wakeTime: eff.baseWakeTime || eff.wakeTime }, addDays(dayDate, 1))}`}>
         <Btn title="פתח מחדש את התחנה האחרונה" kind="line" small style={{ marginTop: SP.xl }}
           onPress={() => actions.undo(plan.list[plan.list.length - 1].id)} />
       </Center>
@@ -237,7 +237,7 @@ function BlockedSheet() {
 
 // כרטיס טיסה חי — לחיצה מציגה את *סדר היום עצמו*, ולא רשימת אבני דרך סטטית.
 // ימי העתיד נטענים מאותו מנוע תכנון ומאותו אחסון כמו מסך היום.
-function FlightCountdown({ sec, plan, state, settings, dayDate, now, zmanim }) {
+function FlightCountdown({ sec, plan, state, settings, dayDate, now, zmanim, go }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [daysPlan, setDaysPlan] = useState([]);
@@ -286,6 +286,34 @@ function FlightCountdown({ sec, plan, state, settings, dayDate, now, zmanim }) {
     loadTimeline();
     return () => { cancelled = true; };
   }, [open, outbound, calendarKey]);
+
+  // אחרי הנחיתה הבית מתמקד בביקור ובכינוס, לא בספירה עד טיסת החזור.
+  const visiting = nf?.flight?.id === 'ua2838' &&
+    Date.now() >= Date.UTC(2026, 10, 3, 21, 35) &&
+    Date.now() < Date.UTC(2026, 10, 9, 5, 0);
+  if (visiting) {
+    const nyDay = Number(new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York', day: 'numeric',
+    }).format(new Date()));
+    const heading = nyDay === 3 ? 'הגענו לרבי!' :
+      nyDay === 4 ? 'היום: הביקור באוהל הק׳' : 'ימי כינוס השלוחים';
+    const detail = nyDay === 3 ? 'מחר: השכמה 06:15 · ההסעה לאוהל מתוכננת ל־07:00' :
+      nyDay === 4 ? 'כתיבת פ״נ, תפילה באוהל והמשך תוכנית הכינוס' :
+      'סדנאות, מפגשי שלוחים ותוכנית הביקור אצל הרבי';
+    return (
+      <Pressable onPress={() => go('day')}
+        style={{ backgroundColor: t.navy, borderRadius: R.lg, paddingVertical: 14, paddingHorizontal: 16,
+          marginBottom: SP.md, marginTop: SP.sm, flexDirection: 'row', alignItems: 'center', gap: SP.sm }}>
+        <Icon name="shul" size={26} color={t.gold} />
+        <View style={{ flex: 1 }}>
+          <T v="tiny" style={{ color: t.onNavy }}>כינוס השלוחים · ניו יורק</T>
+          <T v="h2" style={{ color: t.onNavy, marginTop: 3 }}>{heading}</T>
+          <T v="small" style={{ color: t.onNavy, marginTop: 3 }}>{detail}</T>
+          <T v="tiny" style={{ color: t.gold, marginTop: 5 }}>לתוכנית היום וההמשך ›</T>
+        </View>
+      </Pressable>
+    );
+  }
 
   if (!nf || nf.ms > 21 * 864e5) return null;
   const ms = Math.max(0, nf.ms);
