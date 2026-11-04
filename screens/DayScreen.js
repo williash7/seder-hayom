@@ -7,6 +7,7 @@ import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Sheet, Chip, Field } from '../components/UI';
 import Icon from '../components/Icon';
 import PlanChange from '../components/PlanChange';
+import BatchDayEditor from '../components/BatchDayEditor';
 import { toTime, fmtDur, DAY_NAMES } from '../lib/time';
 import { STATION_TYPES } from '../lib/defaults';
 import { useEffect } from 'react';
@@ -111,7 +112,7 @@ function PhoneLog() {
 export default function DayScreen({ go }) {
   const t = useT();
   const ins = useSafeAreaInsets();
-  const { plan: todayPlan, zmanim: todayZ, dayDate: today, hebrew, actions, settings, eff, sleep, state: todayState } = useDay();
+  const { plan: todayPlan, zmanim: todayZ, dayDate: today, hebrew, actions, settings, eff, sleep, now, state: todayState } = useDay();
   // היום / מחר
   const [which, setWhich] = useState('today');
   const tDate = addDays(today, 1), tKey = dateKey(tDate);
@@ -136,6 +137,22 @@ export default function DayScreen({ go }) {
   };
   const offList = (settings.stations || []).filter(x => overrides[x.id]?.off);
   const [sel, setSel] = useState(null);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchFocus, setBatchFocus] = useState(null);
+  const openBatch = id => {
+    setSel(null);
+    setBatchFocus(id || null);
+    // ב-Android סוגרים את גיליון התחנה לפני פתיחת גיליון עריכה אחר.
+    setTimeout(() => setBatchOpen(true), id ? 250 : 0);
+  };
+  const saveBatch = draft => {
+    if (isToday) actions.applyDayDraft(draft);
+    else {
+      const next = { ...tState, overrides: draft.overrides, extras: draft.extras };
+      setTState(next);
+      S.saveDay(tKey, next);
+    }
+  };
   const [movePicker, setMovePicker] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const isPast = s => s.status === 'done' || s.status === 'skipped' || s.status === 'auto';
@@ -157,6 +174,8 @@ export default function DayScreen({ go }) {
         <T v="title">{isToday ? '' : 'מחר — '}יום {DAY_NAMES[dayDate.getDay()]}</T>
         <T c="sub" style={{ marginTop: 2 }}>נעשו {done} · נשארו {plan.list.filter(x => x.status === 'pending' || x.status === 'current').length}</T>
         {isToday && <View style={{ marginTop: SP.sm }}><PlanChange /></View>}
+        <Btn title="עריכה מרוכזת · שעות, משימות וכתובות" icon="settings" kind="line"
+          style={{ marginTop: SP.md }} onPress={() => openBatch(null)} />
 
         {Z.length > 0 && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: SP.lg, backgroundColor: t.surface, borderRadius: R.md, borderWidth: 1, borderColor: t.hair, paddingVertical: 6 }}>
@@ -222,7 +241,9 @@ export default function DayScreen({ go }) {
       <Sheet visible={!!sel} onClose={() => setSel(null)} title={sel?.title || ''}>
         {sel && (
           <View style={{ gap: SP.sm }}>
-            <T c="sub">{STATION_TYPES[sel.type]} · {toTime(sel.plannedStart)}–{toTime(sel.plannedEnd)}</T>
+            <T c="sub">{STATION_TYPES[sel.type] || 'משימה'} · {toTime(sel.plannedStart)}–{toTime(sel.plannedEnd)}</T>
+            <Btn title="ערוך שעה, משך, כתובת או הליכה — ושמור בסוף" icon="settings" kind="gold"
+              onPress={() => openBatch(sel.id)} />
             {isToday && sel.status !== 'current' && sel.status !== 'done' && (
               <Btn title="לעבור לתחנה הזו עכשיו" icon="fwd" kind="gold"
                 onPress={() => { actions.jumpTo(sel.id); setSel(null); go('now'); }} />
@@ -279,6 +300,10 @@ export default function DayScreen({ go }) {
           </View>
         )}
       </Sheet>
+      <BatchDayEditor visible={batchOpen} onClose={() => setBatchOpen(false)}
+        onSave={saveBatch} settings={eff || settings} dayDate={dayDate}
+        dayState={isToday ? todayState : tState} zmanim={zmanim}
+        now={isToday ? now : 0} focusId={batchFocus} />
     </View>
   );
 }
