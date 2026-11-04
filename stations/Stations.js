@@ -334,6 +334,10 @@ function Drive({ s }) {
   const legs = s.rec?.data?.order || s.legs || [];
   const leg = s.rec?.data?.leg || 0;
   const walking = !!s.walk;
+  const destination = id => {
+    const saved = settings.places?.[id] || TRIP_PLACES[id] || { name: id };
+    return s.address ? { ...saved, address: s.address, minutes: s.manualMinutes ?? saved.minutes } : saved;
+  };
   // סדר האיסוף לבחירה (למשל: קודם הבנות או קודם צביה)
   const first = id => actions.setData(s.id, { order: [id, ...legs.filter(x => x !== id)] });
   const [returned, setReturned] = useState(false);
@@ -347,7 +351,7 @@ function Drive({ s }) {
   const go = async () => {
     actions.start(s.id);
     try {
-      const place = settings.places?.[legs[leg]] || TRIP_PLACES[legs[leg]];
+      const place = destination(legs[leg]);
       opened.current = true;
       if (walking) await openGoogleMapsWalking(place);
       else await openWaze(place);
@@ -380,7 +384,7 @@ function Drive({ s }) {
         </View>
       )}
       {legs.map((id, i) => {
-        const p = settings.places?.[id] || TRIP_PLACES[id] || { name: id };
+        const p = destination(id);
         const state = i < leg ? 'done' : i === leg ? 'cur' : 'next';
         return (
           <View key={id + i} style={{ flexDirection: 'row', alignItems: 'center', gap: SP.md, paddingVertical: 10, opacity: state === 'done' ? 0.45 : 1 }}>
@@ -397,7 +401,8 @@ function Drive({ s }) {
         );
       })}
       <Actions>
-        <Btn title={`${walking ? 'פתח Google Maps להליכה' : 'פתח וויז'} — ${(settings.places?.[legs[leg]] || TRIP_PLACES[legs[leg]])?.name || ''}`} icon="nav" kind={returned ? 'line' : 'gold'} onPress={go} />
+        <Btn title={(walking ? 'פתח Google Maps להליכה' : 'פתח וויז') + ' — ' + (destination(legs[leg])?.name || s.title || '')}
+          icon="nav" kind={returned ? 'line' : 'gold'} onPress={go} />
         <Btn title={leg + 1 >= legs.length ? 'הגעתי' : 'הגעתי — לתחנה הבאה'} icon="check"
           kind={returned ? 'ok' : 'primary'} onPress={arrived} />
       </Actions>
