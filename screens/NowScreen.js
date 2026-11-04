@@ -22,6 +22,7 @@ import { getZmanim } from '../lib/zmanim';
 import * as Store from '../lib/store';
 import StationBody, { useSeconds } from '../stations/Stations';
 import { toTime, fmtDur, fmtClock, toMin, DAY_NAMES, addDays } from '../lib/time';
+import { openGoogleMapsWalking, openWaze } from '../lib/launch';
 
 const dateKeyLocal = d => [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 function KeepAwake() { useKeepAwake(); return null; }
@@ -184,6 +185,16 @@ export default function NowScreen({ go }) {
 
       <View style={{ marginTop: SP.lg }}>
         <StationBody s={s} go={go} />
+        {!!s.address && s.type !== 'drive' && (
+          <View style={{ marginTop: SP.md, gap: 5 }}>
+            <T v="small" c="sub">כתובת: {s.address}</T>
+            <Btn title={s.walk ? 'ניווט ברגל ב־Google Maps' : 'ניווט לכתובת'}
+              kind="line" icon="nav" small onPress={() => {
+                const open = s.walk ? openGoogleMapsWalking : openWaze;
+                open({ address: s.address }).catch(e => Alert.alert('שגיאה בניווט', String(e?.message || e)));
+              }} />
+          </View>
+        )}
       </View>
 
       {!s.at && !s.arriveBy && !s.protect && !s.fill && s.type !== 'prayer' && s.type !== 'close' && (
