@@ -156,13 +156,20 @@ export default function DayScreen({ go }) {
   };
   const [movePicker, setMovePicker] = useState(false);
   const [showPast, setShowPast] = useState(false);
+  const [showAllZmanim, setShowAllZmanim] = useState(false);
   const isPast = s => s.status === 'done' || s.status === 'skipped' || s.status === 'auto';
   const pastCount = plan.list.filter(isPast).length;
   const list = showPast ? plan.list : plan.list.filter(s => !isPast(s));
 
   const done = plan.list.filter(s => s.status === 'done').length;
   const Z = [['נץ', zmanim.sunrise], ['סוף ק״ש', zmanim.sofZmanShma], ['סוף תפילה', zmanim.sofZmanTfilla],
-    ['שקיעה', zmanim.sunset], ['צאת', zmanim.tzeit], ['נרות', zmanim.candles]].filter(z => z[1]);
+    ['שקיעה', zmanim.sunset], ['צאת', zmanim.tzeit],
+    ['נרות', dayDate.getDay() === 5 ? zmanim.candles : null],
+    ['מוצ״ש', dayDate.getDay() === 6 ? zmanim.havdala : null]].filter(z => z[1]);
+  const moreZ = [['עלות השחר', zmanim.alot], ['משיכיר', zmanim.misheyakir],
+    ['חצות היום', zmanim.chatzot], ['מנחה גדולה', zmanim.minchaGedola],
+    ['מנחה קטנה', zmanim.minchaKetana], ['פלג המנחה', zmanim.plag],
+    ['חצות הלילה', zmanim.chatzotHalaila], ['שעה זמנית', zmanim.shaahZmanit]].filter(z => z[1]);
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -178,15 +185,42 @@ export default function DayScreen({ go }) {
         <Btn title="עריכה מרוכזת · שעות, משימות וכתובות" icon="settings" kind="line"
           style={{ marginTop: SP.md }} onPress={() => openBatch(null)} />
 
-        {Z.length > 0 && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: SP.lg, backgroundColor: t.surface, borderRadius: R.md, borderWidth: 1, borderColor: t.hair, paddingVertical: 6 }}>
-            {Z.map(([k, v]) => (
-              <View key={k} style={{ width: '33.33%', alignItems: 'center', paddingVertical: 6 }}>
-                <T v="tiny" c="sub">{k}</T><T v="bodyB">{v}</T>
-              </View>
-            ))}
-          </View>
-        )}
+        <View style={{ marginTop: SP.lg, backgroundColor: t.surface, borderRadius: R.md, borderWidth: 1,
+          borderColor: t.hair, padding: SP.sm, gap: 6 }}>
+          <T v="small" style={{ textAlign: 'center', fontWeight: '700' }}>
+            זמני היום · {zmanim.locationLabel || 'מזהה מיקום…'}
+          </T>
+          {zmanim.unknownLocation && (
+            <T v="small" style={{ color: t.warn, textAlign: 'center' }}>
+              לא זוהה מיקום — אפשר להפעיל הרשאת מיקום בטלפון.
+            </T>
+          )}
+          {!!Z.length && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {Z.map(([k, v]) => (
+                <View key={k} style={{ width: '33.33%', alignItems: 'center', paddingVertical: 6 }}>
+                  <T v="tiny" c="sub">{k}</T><T v="bodyB">{v}</T>
+                </View>
+              ))}
+            </View>
+          )}
+          {showAllZmanim && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderColor: t.hair }}>
+              {moreZ.map(([k, v]) => (
+                <View key={k} style={{ width: '33.33%', alignItems: 'center', paddingVertical: 6 }}>
+                  <T v="tiny" c="sub">{k}</T><T v="bodyB">{v}</T>
+                </View>
+              ))}
+            </View>
+          )}
+          {!!moreZ.length && (
+            <Btn title={showAllZmanim ? 'הסתר זמני היום הנוספים' : 'כל זמני היום לפי חב״ד'}
+              kind="ghost" small onPress={() => setShowAllZmanim(v => !v)} />
+          )}
+          <T v="tiny" c="sub" style={{ textAlign: 'center' }}>
+            חישוב לפי שיטת אדמו״ר הזקן · לא להמתין לרגע האחרון של זמן הלכתי
+          </T>
+        </View>
 
         {isToday && sleep && <View style={{ marginTop: SP.md }}><SleepCard sleep={sleep} /></View>}
         {pastCount > 0 && (
