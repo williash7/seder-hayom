@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS as S } from '../../lib/defaults';
 import { toMin, toTime } from '../../lib/time';
 import { weekLessons } from '../../lib/lessons';
 import { INBOX } from '../../lib/inbox';
+import { createDayDraft, normalizedTime, reviewDayDraft } from '../../lib/dayBatch';
 
 let failed = 0;
 const ok = (cond, msg) => { if (!cond) { failed++; console.error('✗ ' + msg); } else console.log('✓ ' + msg); };
@@ -557,6 +558,33 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   const thu = planDay({ settings: S, date: new Date(2026, 10, 5, 6), state: {}, zmanim: z, now: toMin('06:00') });
   ok(toTime(find(thu, 'rebbe_room_shacharit').plannedStart) === '09:30',
     'העדכון אינו משנה שחרית בחדר הרבי ביום חמישי');
+}
+
+// עריכה מרוכזת: טיוטה אינה משנה מצב יום שמור, והתנגשויות נבדקות לפני שמירה.
+{
+  const day = { stations: {}, choices: {} };
+  const d = new Date(2026, 10, 16, 9);
+  const blank = { ...S, stations: [] };
+  const draft = createDayDraft(day);
+  draft.extras = [
+    { id: 'first', batch: 'first', type: 'timer', title: 'פגישה ראשונה', at: '10:00', minutes: 30 },
+    { id: 'second', batch: 'second', type: 'timer', title: 'פגישה שנייה', at: '10:15', minutes: 30 },
+  ];
+  const result = reviewDayDraft({ settings: blank, date: d, state: day, draft, zmanim: {}, now: 540 });
+  ok(result.warnings.some(w => w.includes('חפיפה')), 'עריכה מרוכזת מזהה שעות חופפות לפני שמירה');
+  ok(!day.extras && !day.overrides, 'עריכה מרוכזת לא משנה את מצב היום לפני שמירה');
+  ok(normalizedTime('7:05') === '07:05' && normalizedTime('25:90') === null,
+    'שעות עריכה נבדקות ומנורמלות');
+  const edited = createDayDraft(day);
+  edited.overrides.a = { title: 'כותרת חדשה', at: null, manualMinutes: 15,
+    address: '770 Eastern Parkway, Brooklyn, NY', walk: true };
+  const single = reviewDayDraft({ settings: { ...S, stations: [
+    { id: 'a', title: 'כותרת מקורית', type: 'timer', at: '10:00', minutes: 30 },
+  ] }, date: d, state: day, draft: edited, zmanim: {}, now: 540 });
+  const item = single.plan.list.find(x => x.id === 'a');
+  ok(item?.title === 'כותרת חדשה' && item?.at == null && item?.duration === 15 &&
+    item?.walk && item?.address.includes('Brooklyn'),
+    'הטיוטה מאפשרת לשנות שם, להסיר שעה, לקבוע משך וניווט ברגל');
 }
 
 // ── יום בחירות (27.10): הילדים בבית, המשימות מוכנסות והמוסדות יוצאים ──
