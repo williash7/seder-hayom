@@ -166,7 +166,7 @@ export default function BatchDayEditor({
   };
 
   return (
-    <Sheet visible={visible} onClose={askClose} title="עריכה מרוכזת — יום " + dayKey}>
+    <Sheet visible={visible} onClose={askClose} title={'עריכה מרוכזת — יום ' + dayKey}>
       {!draft || !report ? <T c="sub">טוען טיוטה…</T> : (
         <View style={{ gap: SP.md }}>
           {!form ? (
