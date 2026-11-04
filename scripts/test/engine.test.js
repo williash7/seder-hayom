@@ -572,6 +572,16 @@ ok(!!find(p, 'bedtime_kids_motzash'), 'מוצ״ש — השכבת הילדים');
   ];
   const result = reviewDayDraft({ settings: blank, date: d, state: day, draft, zmanim: {}, now: 540 });
   ok(result.warnings.some(w => w.includes('חפיפה')), 'עריכה מרוכזת מזהה שעות חופפות לפני שמירה');
+  const withTask = createDayDraft(day);
+  withTask.extras = [{ id: 'appt', batch: 'appt', type: 'timer',
+    title: 'תפילה', at: '10:00', minutes: 30 }];
+  withTask.taskEdits.task1 = { at: '10:10', minutes: 20 };
+  const taskTest = reviewDayDraft({ settings: blank, date: d, state: day,
+    draft: withTask, zmanim: {}, now: 540,
+    tasks: [{ id: 'task1', date: '2026-11-16', title: 'משימה אישית', minutes: 10 }] });
+  ok(taskTest.warnings.some(w => w.includes('משימה אישית') && w.includes('תפילה')),
+    'בודק חפיפה גם למשימות עצמאיות שנערכו בטיוטה');
+  ok(!day.taskEdits, 'טיוטת המשימות אינה משנה מידע שמור לפני שמירה');
   ok(!day.extras && !day.overrides, 'עריכה מרוכזת לא משנה את מצב היום לפני שמירה');
   ok(normalizedTime('7:05') === '07:05' && normalizedTime('25:90') === null,
     'שעות עריכה נבדקות ומנורמלות');
