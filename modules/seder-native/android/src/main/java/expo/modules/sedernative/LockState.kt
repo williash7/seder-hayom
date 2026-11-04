@@ -7,6 +7,31 @@ import android.telecom.TelecomManager
 
 /** מתי לחסום אפליקציה בזמן בית */
 internal object LockState {
+  // אפליקציות מערכת שחייבות להישאר זמינות גם כשנעילת זמן בית פעילה.
+  // רשימה מפורשת בלבד — לא לפתוח אוטומטית כל חבילה עם קידומת Samsung.
+  private val criticalPackages = setOf(
+    "com.android.settings",
+    "com.samsung.android.settings",
+    "com.android.dialer",
+    "com.google.android.dialer",
+    "com.samsung.android.dialer",
+    "com.sec.android.app.dialertab",
+    "com.android.phone",
+    "com.android.incallui",
+    "com.samsung.android.incallui",
+    "com.android.server.telecom",
+    "com.android.providers.telephony",
+    "com.android.contacts",
+    "com.google.android.contacts",
+    "com.samsung.android.app.contacts",
+    "com.google.android.permissioncontroller",
+    "com.android.permissioncontroller",
+    "com.samsung.android.permissioncontroller",
+    "com.osp.app.signin",
+    "com.samsung.android.mobileservice",
+    "com.samsung.android.samsungaccount",
+  )
+
   fun set(ctx: Context, active: Boolean, fromMs: Long, untilMs: Long, allowed: List<String>) {
     Prefs.get(ctx).edit()
       .putBoolean("lockActive", active)
@@ -41,6 +66,7 @@ internal object LockState {
   /** חבילות שלעולם לא נחסמות */
   fun alwaysAllowed(ctx: Context, pkg: String): Boolean =
     pkg == ctx.packageName || pkg == "com.android.systemui" || pkg == "android" ||
+      pkg in criticalPackages ||
       pkg == launcher(ctx) || pkg == dialer(ctx) ||
       pkg.contains("incallui") || pkg.contains("inputmethod") || pkg.contains("keyboard") ||
       pkg == "com.android.settings" || pkg == "com.google.android.permissioncontroller" ||

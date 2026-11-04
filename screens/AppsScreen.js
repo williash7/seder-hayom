@@ -8,7 +8,7 @@ import { useT, SP, R } from '../lib/theme';
 import { T, Btn, Card, Field, Chip, Sheet, Check } from '../components/UI';
 import * as Native from '../lib/native';
 import LockPause from '../components/LockPause';
-import { GROUPS, groupOf } from '../lib/appGroups';
+import { GROUPS, groupOf, isCriticalSystemApp } from '../lib/appGroups';
 
 let cache = null;           // רשימת האפליקציות (עם אייקונים) — נטענת פעם אחת
 let freeUntil = {};         // pkg → עד מתי פתוח בלי לשאול שוב
@@ -59,7 +59,7 @@ export default function AppsScreen() {
   }, [settings, mode]);
 
   const { lockPausedUntil } = useDay();
-  const isFree = pkg => (lockPausedUntil || 0) > Date.now() || free.has(pkg) || (freeUntil[pkg] || 0) > Date.now();
+  const isFree = pkg => isCriticalSystemApp(pkg) || (lockPausedUntil || 0) > Date.now() || free.has(pkg) || (freeUntil[pkg] || 0) > Date.now();
   const open = pkg => { if (!Native.openPackage(pkg)) Alert.alert('לא נפתח', 'האפליקציה לא נמצאה'); };
   const tap = a => (isFree(a.pkg) ? open(a.pkg) : (setAsk(a), setReason(''), setAlways(false)));
 
@@ -90,6 +90,7 @@ export default function AppsScreen() {
   const torahPkgs = useMemo(() => Object.values(settings.apps || {}).map(a => a.pkg).filter(Boolean), [settings.apps]);
   const gOf = pkg => groupOf(settings, pkg, { torahPkgs });
   const setGroup = (pkg, g) => {
+    if (isCriticalSystemApp(pkg)) { setMove(null); return; }
     const l = settings.launcher || {};
     actions.saveSettings({ ...settings, launcher: { ...l, groups: { ...(l.groups || {}), [pkg]: g } } });
     setMove(null);
@@ -107,7 +108,7 @@ export default function AppsScreen() {
   const Grid = ({ list, dim }) => (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
       {list.map(a => (
-        <Pressable key={a.pkg} onPress={() => tap(a)} onLongPress={() => setMove(a)} style={({ pressed }) => ({ width: '25%', alignItems: 'center', paddingVertical: SP.md, opacity: pressed ? 0.5 : dim ? 0.55 : 1 })}>
+        <Pressable key={a.pkg} onPress={() => tap(a)} onLongPress={() => { if (!isCriticalSystemApp(a.pkg)) setMove(a); }} style={({ pressed }) => ({ width: '25%', alignItems: 'center', paddingVertical: SP.md, opacity: pressed ? 0.5 : dim ? 0.55 : 1 })}>
           {a.icon ? <Image source={{ uri: 'data:image/png;base64,' + a.icon }} style={{ width: 52, height: 52 }} />
             : <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: t.sunk, alignItems: 'center', justifyContent: 'center' }}><T v="bodyB" c="sub">{a.label.slice(0, 1)}</T></View>}
           <T v="tiny" numberOfLines={1} style={{ marginTop: 6, paddingHorizontal: 4, textAlign: 'center' }}>{a.label}</T>
